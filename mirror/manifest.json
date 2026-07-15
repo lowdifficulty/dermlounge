@@ -1,0 +1,417 @@
+{
+  "generatedAt": "2026-07-15T02:31:03.697Z",
+  "site": "https://www.mydermlounge.com",
+  "total": 82,
+  "routes": [
+    {
+      "route": "/",
+      "url": "https://www.mydermlounge.com/",
+      "file": "mirror/html/index.html"
+    },
+    {
+      "route": "/about",
+      "url": "https://www.mydermlounge.com/about/",
+      "file": "mirror/html/about/index.html"
+    },
+    {
+      "route": "/advanced-medical-aesthetics-in-anaheim-the-myderm-lounge-approach",
+      "url": "https://www.mydermlounge.com/advanced-medical-aesthetics-in-anaheim-the-myderm-lounge-approach/",
+      "file": "mirror/html/advanced-medical-aesthetics-in-anaheim-the-myderm-lounge-approach/index.html"
+    },
+    {
+      "route": "/advanced-wound-care-services",
+      "url": "https://www.mydermlounge.com/advanced-wound-care-services/",
+      "file": "mirror/html/advanced-wound-care-services/index.html"
+    },
+    {
+      "route": "/advanced-wound-care-services-anaheim",
+      "url": "https://www.mydermlounge.com/advanced-wound-care-services-anaheim/",
+      "file": "mirror/html/advanced-wound-care-services-anaheim/index.html"
+    },
+    {
+      "route": "/advanced-wound-care-services/circulation-related-ulcer-care",
+      "url": "https://www.mydermlounge.com/advanced-wound-care-services/circulation-related-ulcer-care/",
+      "file": "mirror/html/advanced-wound-care-services/circulation-related-ulcer-care/index.html"
+    },
+    {
+      "route": "/advanced-wound-care-services/infected-and-inflammatory-wound-care",
+      "url": "https://www.mydermlounge.com/advanced-wound-care-services/infected-and-inflammatory-wound-care/",
+      "file": "mirror/html/advanced-wound-care-services/infected-and-inflammatory-wound-care/index.html"
+    },
+    {
+      "route": "/advanced-wound-care-services/moisture-related-skin-breakdown",
+      "url": "https://www.mydermlounge.com/advanced-wound-care-services/moisture-related-skin-breakdown/",
+      "file": "mirror/html/advanced-wound-care-services/moisture-related-skin-breakdown/index.html"
+    },
+    {
+      "route": "/advanced-wound-care-services/non-healing-wound-care",
+      "url": "https://www.mydermlounge.com/advanced-wound-care-services/non-healing-wound-care/",
+      "file": "mirror/html/advanced-wound-care-services/non-healing-wound-care/index.html"
+    },
+    {
+      "route": "/advanced-wound-care-services/pressure-related-wounds",
+      "url": "https://www.mydermlounge.com/advanced-wound-care-services/pressure-related-wounds/",
+      "file": "mirror/html/advanced-wound-care-services/pressure-related-wounds/index.html"
+    },
+    {
+      "route": "/advanced-wound-care-services/surgical-and-post-procedure-wound-care",
+      "url": "https://www.mydermlounge.com/advanced-wound-care-services/surgical-and-post-procedure-wound-care/",
+      "file": "mirror/html/advanced-wound-care-services/surgical-and-post-procedure-wound-care/index.html"
+    },
+    {
+      "route": "/advanced-wound-care-services/traumatic-wound-care",
+      "url": "https://www.mydermlounge.com/advanced-wound-care-services/traumatic-wound-care/",
+      "file": "mirror/html/advanced-wound-care-services/traumatic-wound-care/index.html"
+    },
+    {
+      "route": "/author/webtech",
+      "url": "https://www.mydermlounge.com/author/webtech/",
+      "file": "mirror/html/author/webtech/index.html"
+    },
+    {
+      "route": "/blog",
+      "url": "https://www.mydermlounge.com/blog/",
+      "file": "mirror/html/blog/index.html"
+    },
+    {
+      "route": "/category/uncategorized",
+      "url": "https://www.mydermlounge.com/category/uncategorized/",
+      "file": "mirror/html/category/uncategorized/index.html"
+    },
+    {
+      "route": "/contact-us",
+      "url": "https://www.mydermlounge.com/contact-us/",
+      "file": "mirror/html/contact-us/index.html"
+    },
+    {
+      "route": "/derm-lounge-membership",
+      "url": "https://www.mydermlounge.com/derm-lounge-membership/",
+      "file": "mirror/html/derm-lounge-membership/index.html"
+    },
+    {
+      "route": "/diversity-inclusion",
+      "url": "https://www.mydermlounge.com/diversity-inclusion/",
+      "file": "mirror/html/diversity-inclusion/index.html"
+    },
+    {
+      "route": "/insurances-accepted",
+      "url": "https://www.mydermlounge.com/insurances-accepted/",
+      "file": "mirror/html/insurances-accepted/index.html"
+    },
+    {
+      "route": "/male-services",
+      "url": "https://www.mydermlounge.com/male-services/",
+      "file": "mirror/html/male-services/index.html"
+    },
+    {
+      "route": "/monthly-specials",
+      "url": "https://www.mydermlounge.com/monthly-specials/",
+      "file": "mirror/html/monthly-specials/index.html"
+    },
+    {
+      "route": "/payment-plans",
+      "url": "https://www.mydermlounge.com/payment-plans/",
+      "file": "mirror/html/payment-plans/index.html"
+    },
+    {
+      "route": "/privacy-policy",
+      "url": "https://www.mydermlounge.com/privacy-policy/",
+      "file": "mirror/html/privacy-policy/index.html"
+    },
+    {
+      "route": "/providers",
+      "url": "https://www.mydermlounge.com/providers/",
+      "file": "mirror/html/providers/index.html"
+    },
+    {
+      "route": "/science-behind-platelet-rich-plasma-treatments",
+      "url": "https://www.mydermlounge.com/science-behind-platelet-rich-plasma-treatments/",
+      "file": "mirror/html/science-behind-platelet-rich-plasma-treatments/index.html"
+    },
+    {
+      "route": "/scientific-explanation-of-how-neuromodulators-work",
+      "url": "https://www.mydermlounge.com/scientific-explanation-of-how-neuromodulators-work/",
+      "file": "mirror/html/scientific-explanation-of-how-neuromodulators-work/index.html"
+    },
+    {
+      "route": "/services",
+      "url": "https://www.mydermlounge.com/services/",
+      "file": "mirror/html/services/index.html"
+    },
+    {
+      "route": "/services/acne",
+      "url": "https://www.mydermlounge.com/services/acne/",
+      "file": "mirror/html/services/acne/index.html"
+    },
+    {
+      "route": "/services/acne-bootcamp-anaheim",
+      "url": "https://www.mydermlounge.com/services/acne-bootcamp-anaheim/",
+      "file": "mirror/html/services/acne-bootcamp-anaheim/index.html"
+    },
+    {
+      "route": "/services/basal-cell-carcinoma",
+      "url": "https://www.mydermlounge.com/services/basal-cell-carcinoma/",
+      "file": "mirror/html/services/basal-cell-carcinoma/index.html"
+    },
+    {
+      "route": "/services/biostimulators",
+      "url": "https://www.mydermlounge.com/services/biostimulators/",
+      "file": "mirror/html/services/biostimulators/index.html"
+    },
+    {
+      "route": "/services/blistering-disorders",
+      "url": "https://www.mydermlounge.com/services/blistering-disorders/",
+      "file": "mirror/html/services/blistering-disorders/index.html"
+    },
+    {
+      "route": "/services/bojin-meridian-facial",
+      "url": "https://www.mydermlounge.com/services/bojin-meridian-facial/",
+      "file": "mirror/html/services/bojin-meridian-facial/index.html"
+    },
+    {
+      "route": "/services/botox",
+      "url": "https://www.mydermlounge.com/services/botox/",
+      "file": "mirror/html/services/botox/index.html"
+    },
+    {
+      "route": "/services/cancer-checks",
+      "url": "https://www.mydermlounge.com/services/cancer-checks/",
+      "file": "mirror/html/services/cancer-checks/index.html"
+    },
+    {
+      "route": "/services/deka-co2",
+      "url": "https://www.mydermlounge.com/services/deka-co2/",
+      "file": "mirror/html/services/deka-co2/index.html"
+    },
+    {
+      "route": "/services/dermal-fillers",
+      "url": "https://www.mydermlounge.com/services/dermal-fillers/",
+      "file": "mirror/html/services/dermal-fillers/index.html"
+    },
+    {
+      "route": "/services/dermatitis",
+      "url": "https://www.mydermlounge.com/services/dermatitis/",
+      "file": "mirror/html/services/dermatitis/index.html"
+    },
+    {
+      "route": "/services/dysport",
+      "url": "https://www.mydermlounge.com/services/dysport/",
+      "file": "mirror/html/services/dysport/index.html"
+    },
+    {
+      "route": "/services/eczema",
+      "url": "https://www.mydermlounge.com/services/eczema/",
+      "file": "mirror/html/services/eczema/index.html"
+    },
+    {
+      "route": "/services/excisions",
+      "url": "https://www.mydermlounge.com/services/excisions/",
+      "file": "mirror/html/services/excisions/index.html"
+    },
+    {
+      "route": "/services/hydrafacial",
+      "url": "https://www.mydermlounge.com/services/hydrafacial/",
+      "file": "mirror/html/services/hydrafacial/index.html"
+    },
+    {
+      "route": "/services/hydrating-facial-keravive",
+      "url": "https://www.mydermlounge.com/services/hydrating-facial-keravive/",
+      "file": "mirror/html/services/hydrating-facial-keravive/index.html"
+    },
+    {
+      "route": "/services/infections",
+      "url": "https://www.mydermlounge.com/services/infections/",
+      "file": "mirror/html/services/infections/index.html"
+    },
+    {
+      "route": "/services/ipl-photofacial",
+      "url": "https://www.mydermlounge.com/services/ipl-photofacial/",
+      "file": "mirror/html/services/ipl-photofacial/index.html"
+    },
+    {
+      "route": "/services/juvederm",
+      "url": "https://www.mydermlounge.com/services/juvederm/",
+      "file": "mirror/html/services/juvederm/index.html"
+    },
+    {
+      "route": "/services/juvederm-ultra-xc-anaheim",
+      "url": "https://www.mydermlounge.com/services/juvederm-ultra-xc-anaheim/",
+      "file": "mirror/html/services/juvederm-ultra-xc-anaheim/index.html"
+    },
+    {
+      "route": "/services/juvederm-vollure-anaheim",
+      "url": "https://www.mydermlounge.com/services/juvederm-vollure-anaheim/",
+      "file": "mirror/html/services/juvederm-vollure-anaheim/index.html"
+    },
+    {
+      "route": "/services/juvederm-voluma-xc-anaheim",
+      "url": "https://www.mydermlounge.com/services/juvederm-voluma-xc-anaheim/",
+      "file": "mirror/html/services/juvederm-voluma-xc-anaheim/index.html"
+    },
+    {
+      "route": "/services/kybella-anaheim",
+      "url": "https://www.mydermlounge.com/services/kybella-anaheim/",
+      "file": "mirror/html/services/kybella-anaheim/index.html"
+    },
+    {
+      "route": "/services/laser-facials",
+      "url": "https://www.mydermlounge.com/services/laser-facials/",
+      "file": "mirror/html/services/laser-facials/index.html"
+    },
+    {
+      "route": "/services/laser-hair-removal",
+      "url": "https://www.mydermlounge.com/services/laser-hair-removal/",
+      "file": "mirror/html/services/laser-hair-removal/index.html"
+    },
+    {
+      "route": "/services/melanoma",
+      "url": "https://www.mydermlounge.com/services/melanoma/",
+      "file": "mirror/html/services/melanoma/index.html"
+    },
+    {
+      "route": "/services/microneedling",
+      "url": "https://www.mydermlounge.com/services/microneedling/",
+      "file": "mirror/html/services/microneedling/index.html"
+    },
+    {
+      "route": "/services/mohs-surgery",
+      "url": "https://www.mydermlounge.com/services/mohs-surgery/",
+      "file": "mirror/html/services/mohs-surgery/index.html"
+    },
+    {
+      "route": "/services/moles",
+      "url": "https://www.mydermlounge.com/services/moles/",
+      "file": "mirror/html/services/moles/index.html"
+    },
+    {
+      "route": "/services/morpheus8-microneedling",
+      "url": "https://www.mydermlounge.com/services/morpheus8-microneedling/",
+      "file": "mirror/html/services/morpheus8-microneedling/index.html"
+    },
+    {
+      "route": "/services/needle-free-hydration-treatment",
+      "url": "https://www.mydermlounge.com/services/needle-free-hydration-treatment/",
+      "file": "mirror/html/services/needle-free-hydration-treatment/index.html"
+    },
+    {
+      "route": "/services/oxygen-bubble-facial",
+      "url": "https://www.mydermlounge.com/services/oxygen-bubble-facial/",
+      "file": "mirror/html/services/oxygen-bubble-facial/index.html"
+    },
+    {
+      "route": "/services/picosure-laser-skin-treatment",
+      "url": "https://www.mydermlounge.com/services/picosure-laser-skin-treatment/",
+      "file": "mirror/html/services/picosure-laser-skin-treatment/index.html"
+    },
+    {
+      "route": "/services/pigment-changes",
+      "url": "https://www.mydermlounge.com/services/pigment-changes/",
+      "file": "mirror/html/services/pigment-changes/index.html"
+    },
+    {
+      "route": "/services/psoriasis",
+      "url": "https://www.mydermlounge.com/services/psoriasis/",
+      "file": "mirror/html/services/psoriasis/index.html"
+    },
+    {
+      "route": "/services/radiation-therapy",
+      "url": "https://www.mydermlounge.com/services/radiation-therapy/",
+      "file": "mirror/html/services/radiation-therapy/index.html"
+    },
+    {
+      "route": "/services/restylane-anaheim",
+      "url": "https://www.mydermlounge.com/services/restylane-anaheim/",
+      "file": "mirror/html/services/restylane-anaheim/index.html"
+    },
+    {
+      "route": "/services/rosacea",
+      "url": "https://www.mydermlounge.com/services/rosacea/",
+      "file": "mirror/html/services/rosacea/index.html"
+    },
+    {
+      "route": "/services/sculptra-anaheim",
+      "url": "https://www.mydermlounge.com/services/sculptra-anaheim/",
+      "file": "mirror/html/services/sculptra-anaheim/index.html"
+    },
+    {
+      "route": "/services/skin-checks",
+      "url": "https://www.mydermlounge.com/services/skin-checks/",
+      "file": "mirror/html/services/skin-checks/index.html"
+    },
+    {
+      "route": "/services/squamous-cell-carcinoma",
+      "url": "https://www.mydermlounge.com/services/squamous-cell-carcinoma/",
+      "file": "mirror/html/services/squamous-cell-carcinoma/index.html"
+    },
+    {
+      "route": "/services/thermage",
+      "url": "https://www.mydermlounge.com/services/thermage/",
+      "file": "mirror/html/services/thermage/index.html"
+    },
+    {
+      "route": "/services/ultherapy",
+      "url": "https://www.mydermlounge.com/services/ultherapy/",
+      "file": "mirror/html/services/ultherapy/index.html"
+    },
+    {
+      "route": "/services/valmont-facial-treatments",
+      "url": "https://www.mydermlounge.com/services/valmont-facial-treatments/",
+      "file": "mirror/html/services/valmont-facial-treatments/index.html"
+    },
+    {
+      "route": "/services/volbella-anaheim",
+      "url": "https://www.mydermlounge.com/services/volbella-anaheim/",
+      "file": "mirror/html/services/volbella-anaheim/index.html"
+    },
+    {
+      "route": "/services/volift-anaheim",
+      "url": "https://www.mydermlounge.com/services/volift-anaheim/",
+      "file": "mirror/html/services/volift-anaheim/index.html"
+    },
+    {
+      "route": "/services/warts",
+      "url": "https://www.mydermlounge.com/services/warts/",
+      "file": "mirror/html/services/warts/index.html"
+    },
+    {
+      "route": "/services/weight-loss",
+      "url": "https://www.mydermlounge.com/services/weight-loss/",
+      "file": "mirror/html/services/weight-loss/index.html"
+    },
+    {
+      "route": "/services/xeomin",
+      "url": "https://www.mydermlounge.com/services/xeomin/",
+      "file": "mirror/html/services/xeomin/index.html"
+    },
+    {
+      "route": "/services/zo-skin-health",
+      "url": "https://www.mydermlounge.com/services/zo-skin-health/",
+      "file": "mirror/html/services/zo-skin-health/index.html"
+    },
+    {
+      "route": "/terms-conditions",
+      "url": "https://www.mydermlounge.com/terms-conditions/",
+      "file": "mirror/html/terms-conditions/index.html"
+    },
+    {
+      "route": "/testimonials",
+      "url": "https://www.mydermlounge.com/testimonials/",
+      "file": "mirror/html/testimonials/index.html"
+    },
+    {
+      "route": "/thank-you",
+      "url": "https://www.mydermlounge.com/thank-you/",
+      "file": "mirror/html/thank-you/index.html"
+    },
+    {
+      "route": "/types-of-fillers-available-at-myderm-lounge",
+      "url": "https://www.mydermlounge.com/types-of-fillers-available-at-myderm-lounge/",
+      "file": "mirror/html/types-of-fillers-available-at-myderm-lounge/index.html"
+    },
+    {
+      "route": "/understanding-evidence-based-dermatology",
+      "url": "https://www.mydermlounge.com/understanding-evidence-based-dermatology/",
+      "file": "mirror/html/understanding-evidence-based-dermatology/index.html"
+    }
+  ]
+}

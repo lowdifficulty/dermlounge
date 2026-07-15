@@ -1,0 +1,11 @@
+node_modules/
+.next/
+.vercel/
+.env.local
+.local-server.log
+.local-server.pid
+home.html
+contact.html
+wp-*.json
+lighthouse*.json
+lh-*.json
