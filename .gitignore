@@ -9,3 +9,4 @@ contact.html
 wp-*.json
 lighthouse*.json
 lh-*.json
+.vercel

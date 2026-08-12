@@ -14,26 +14,16 @@ function isValidEmail(email: string): boolean {
   return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
 }
 
-async function sendContactEmail(data: Required<Pick<ContactPayload, "fname" | "email" | "services" | "message">> & Pick<ContactPayload, "pnumber">) {
-  const host = process.env.SMTP_HOST;
-  const port = Number(process.env.SMTP_PORT || "587");
-  const user = process.env.SMTP_USER;
-  const pass = process.env.SMTP_PASS;
+async function sendViaResend(
+  data: Required<Pick<ContactPayload, "fname" | "email" | "services" | "message">> &
+    Pick<ContactPayload, "pnumber">
+): Promise<boolean> {
+  const apiKey = process.env.RESEND_API_KEY?.trim();
+  if (!apiKey) return false;
+
   const to = process.env.CONTACT_TO || "info@mydermlounge.com";
-  const from = process.env.CONTACT_FROM || user || "noreply@mydermlounge.com";
-
-  if (!host || !user || !pass) {
-    console.log("[contact] Email not configured — logging submission:");
-    console.log(JSON.stringify(data, null, 2));
-    return;
-  }
-
-  const transporter = nodemailer.createTransport({
-    host,
-    port,
-    secure: port === 465,
-    auth: { user, pass },
-  });
+  const from =
+    process.env.CONTACT_FROM || "DermLounge <info@mydermlounge.com>";
 
   const lines = [
     `Name: ${data.fname}`,
@@ -44,13 +34,70 @@ async function sendContactEmail(data: Required<Pick<ContactPayload, "fname" | "e
     data.message,
   ];
 
-  await transporter.sendMail({
-    from,
-    to,
-    replyTo: data.email,
-    subject: `DermLounge contact — ${data.services}`,
-    text: lines.join("\n"),
+  const res = await fetch("https://api.resend.com/emails", {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${apiKey}`,
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({
+      from,
+      to: [to],
+      reply_to: data.email,
+      subject: `DermLounge contact — ${data.services}`,
+      text: lines.join("\n"),
+    }),
   });
+
+  if (!res.ok) {
+    const detail = await res.text();
+    throw new Error(`Resend API ${res.status}: ${detail}`);
+  }
+
+  return true;
+}
+
+async function sendContactEmail(data: Required<Pick<ContactPayload, "fname" | "email" | "services" | "message">> & Pick<ContactPayload, "pnumber">) {
+  const host = process.env.SMTP_HOST;
+  const port = Number(process.env.SMTP_PORT || "587");
+  const user = process.env.SMTP_USER;
+  const pass = process.env.SMTP_PASS;
+  const to = process.env.CONTACT_TO || "info@mydermlounge.com";
+  const from = process.env.CONTACT_FROM || user || "noreply@mydermlounge.com";
+
+  if (host && user && pass) {
+    const transporter = nodemailer.createTransport({
+      host,
+      port,
+      secure: port === 465,
+      auth: { user, pass },
+    });
+
+    const lines = [
+      `Name: ${data.fname}`,
+      `Email: ${data.email}`,
+      `Phone: ${data.pnumber || "(not provided)"}`,
+      `Service: ${data.services}`,
+      "",
+      data.message,
+    ];
+
+    await transporter.sendMail({
+      from,
+      to,
+      replyTo: data.email,
+      subject: `DermLounge contact — ${data.services}`,
+      text: lines.join("\n"),
+    });
+    return;
+  }
+
+  if (await sendViaResend(data)) {
+    return;
+  }
+
+  console.log("[contact] Email not configured — logging submission:");
+  console.log(JSON.stringify(data, null, 2));
 }
 
 export async function POST(request: NextRequest) {

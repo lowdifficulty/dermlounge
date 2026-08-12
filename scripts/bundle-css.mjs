@@ -55,7 +55,10 @@ async function buildBundle(hrefs) {
       parts.push(`/* missing: ${href} */\n`);
     }
   }
-  const combined = parts.join("\n");
+  const combined = parts.join("\n").replace(
+    /https?:\/\/(?:www\.)?mydermlounge\.com(\/wp-content\/[^)"']+)/gi,
+    "/assets$1"
+  );
   const hash = createHash("sha256").update(combined).digest("hex").slice(0, 12);
   const bundleName = `${hash}.css`;
   const bundlePath = path.join(BUNDLE_DIR, bundleName);
@@ -63,12 +66,43 @@ async function buildBundle(hrefs) {
 
   try {
     await fs.access(bundlePath);
+    const existing = await fs.readFile(bundlePath, "utf8");
+    if (existing === combined) return bundleHref;
   } catch {
-    await fs.mkdir(BUNDLE_DIR, { recursive: true });
-    await fs.writeFile(bundlePath, combined, "utf8");
+    // write new bundle below
   }
 
+  await fs.mkdir(BUNDLE_DIR, { recursive: true });
+  await fs.writeFile(bundlePath, combined, "utf8");
+
   return bundleHref;
+}
+
+/** Rewrite external wp-content URLs inside already-built bundle files. */
+async function fixExistingBundles() {
+  let entries;
+  try {
+    entries = await fs.readdir(BUNDLE_DIR);
+  } catch {
+    return 0;
+  }
+
+  let fixed = 0;
+  for (const name of entries) {
+    if (!name.endsWith(".css")) continue;
+    const filePath = path.join(BUNDLE_DIR, name);
+    const css = await fs.readFile(filePath, "utf8");
+    const next = css.replace(
+      /https?:\/\/(?:www\.)?mydermlounge\.com(\/wp-content\/[^)"']+)/gi,
+      "/assets$1"
+    );
+    if (next !== css) {
+      await fs.writeFile(filePath, next, "utf8");
+      fixed++;
+      console.log(`  fixed URLs in bundles/${name}`);
+    }
+  }
+  return fixed;
 }
 
 /** @param {string} html @param {string} bundleHref @param {string[]} hrefs */
@@ -110,6 +144,11 @@ function injectBundlePreloads(html) {
 }
 
 async function main() {
+  const fixedBundles = await fixExistingBundles();
+  if (fixedBundles) {
+    console.log(`Patched ${fixedBundles} bundle file(s) with local asset URLs.`);
+  }
+
   const files = await walkHtmlFiles(MIRROR_DIR);
   console.log(`Bundling CSS for ${files.length} pages…`);
 

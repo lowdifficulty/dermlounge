@@ -2,6 +2,8 @@
 
 Next.js 15 app that serves a static mirror of [mydermlounge.com](https://www.mydermlounge.com) via a catch-all route, with Core Web Vitals optimizations and a contact form API.
 
+**Standalone repo:** `C:\Users\Admin\DermLounge` · GitHub [lowdifficulty/dermlounge](https://github.com/lowdifficulty/dermlounge) · Vercel [dermlounge.vercel.app](https://dermlounge.vercel.app). QA checklist: [docs/QA.md](./docs/QA.md).
+
 ## Quick start
 
 ```bash
