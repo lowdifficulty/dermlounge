@@ -1,9 +1,9 @@
 /**
- * Keep http://localhost:3000 running after builds and dev work.
+ * Keep the project local URL running after builds and dev work.
  *
  * Usage:
  *   node scripts/ensure-local.mjs          # health check; restart if down
- *   node scripts/ensure-local.mjs --restart # kill port 3000 and start fresh
+ *   node scripts/ensure-local.mjs --restart # kill configured port and start fresh
  *   npm run ensure-local
  *
  * Hooked from package.json postbuild (skips CI) so localhost serves the latest build.
@@ -11,9 +11,9 @@
 
 import { existsSync } from "node:fs";
 import { join } from "node:path";
-import { killPort, startNextServerDetached } from "./local-server.mjs";
+import { getLocalPort, killPort, startNextServerDetached } from "./local-server.mjs";
 
-const PORT = 3000;
+const PORT = getLocalPort();
 const BASE = `http://localhost:${PORT}`;
 const CHECK_ROUTES = ["/", "/about"];
 

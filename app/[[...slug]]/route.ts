@@ -1,8 +1,18 @@
 import { readFile } from "node:fs/promises";
 import path from "node:path";
+import { notFound } from "next/navigation";
 import { NextRequest, NextResponse } from "next/server";
 
 const MIRROR_ROOT = path.join(process.cwd(), "mirror", "html");
+
+/** Next.js app routes — never serve from mirror/html even if a file exists. */
+const APP_ROUTE_PREFIXES = ["/admin", "/api", "/client", "/staff"];
+
+function isAppRoute(route: string): boolean {
+  return APP_ROUTE_PREFIXES.some(
+    (prefix) => route === prefix || route.startsWith(`${prefix}/`)
+  );
+}
 
 /** Normalize slug segments to a filesystem route (always trailing-slash style). */
 function normalizeRoute(slug?: string[]): string {
@@ -26,6 +36,11 @@ export async function GET(
 ) {
   const { slug } = await context.params;
   const route = normalizeRoute(slug);
+
+  if (isAppRoute(route)) {
+    notFound();
+  }
+
   const htmlPath = htmlFileForRoute(route);
 
   try {

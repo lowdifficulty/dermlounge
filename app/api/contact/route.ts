@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import nodemailer from "nodemailer";
-
+import { upsertLead } from "@/lib/leads/store";
 interface ContactPayload {
   fname?: string;
   email?: string;
@@ -138,8 +138,17 @@ export async function POST(request: NextRequest) {
   }
 
   try {
-    await sendContactEmail({ fname, email, pnumber, services, message });
-    return NextResponse.json({
+    await upsertLead({
+      funnelStep: "contact_info",
+      fullName: fname,
+      email,
+      phone: pnumber || undefined,
+      service: services,
+      message,
+      source: "contact_form",
+    });
+
+    await sendContactEmail({ fname, email, pnumber, services, message });    return NextResponse.json({
       success: true,
       message: "Your message has been received!",
     });

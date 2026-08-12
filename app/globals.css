@@ -1,0 +1,687 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --brand: #111827;
+  --brand-dark: #000000;
+  --brand-bright: #EC1D25;
+  --brand-sky: #EC1D25;
+  --brand-light: #f5f5f5;
+  --accent: #EC1D25;
+  --accent-hot: #c81e1e;
+  --accent-light: #fef2f2;
+  --section-gray: #f5f5f5;
+  --cream: #fafafa;
+  --tan: #fafafa;
+  --white: #FFFFFF;
+}
+
+html {
+  scroll-behavior: smooth;
+  font-size: 18px;
+  scrollbar-gutter: stable;
+}
+
+body {
+  @apply bg-white text-gray-800 antialiased font-sans;
+}
+
+@layer components {
+  .site-container {
+    @apply max-w-6xl mx-auto px-5 md:px-8;
+  }
+
+  .site-section {
+    @apply py-14 md:py-20;
+  }
+
+  .bg-section-white {
+    @apply bg-white;
+  }
+
+  .bg-section-blue {
+    background-color: var(--brand-light);
+  }
+
+  .bg-section-gray {
+    background-color: var(--section-gray);
+  }
+
+  .bg-section-tan {
+    background-color: var(--cream);
+  }
+
+  .bg-section-pink {
+    background-color: var(--pink-brand);
+  }
+
+  .bg-section-hero {
+    background: linear-gradient(180deg, var(--pink-brand) 0%, #ff8fc4 100%);
+  }
+
+  /* /book — premium spa atmosphere */
+  .bg-book-spa {
+    position: relative;
+    isolation: isolate;
+    overflow: hidden;
+    background-color: #2d8fd4;
+    background-image:
+      radial-gradient(ellipse 90% 55% at 50% -5%, rgba(255, 255, 255, 0.32) 0%, transparent 58%),
+      radial-gradient(ellipse 45% 35% at 92% 88%, rgba(120, 210, 255, 0.18) 0%, transparent 55%),
+      radial-gradient(ellipse 40% 32% at 8% 72%, rgba(100, 195, 255, 0.14) 0%, transparent 50%),
+      linear-gradient(168deg, #5ec4f5 0%, #2d8fd4 42%, #1a6fb8 100%);
+  }
+
+  .bg-book-spa::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    opacity: 0.22;
+    background-image:
+      url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.75' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E"),
+      repeating-linear-gradient(
+        118deg,
+        rgba(255, 255, 255, 0.07) 0 1px,
+        transparent 1px 9px
+      ),
+      repeating-linear-gradient(
+        28deg,
+        rgba(255, 255, 255, 0.05) 0 1px,
+        transparent 1px 11px
+      );
+    background-size: 180px 180px, auto, auto;
+    mix-blend-mode: soft-light;
+    pointer-events: none;
+    z-index: 0;
+  }
+
+  .bg-book-spa::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    background: rgba(15, 36, 71, 0.1);
+    pointer-events: none;
+    z-index: 1;
+  }
+
+  .bg-book-spa > * {
+    position: relative;
+    z-index: 2;
+  }
+
+  /* Homepage hero — dark top-left (text column), light bottom-right (image) */
+  .bg-hero-spa {
+    position: relative;
+    isolation: isolate;
+    overflow: hidden;
+    background-color: #1a6fb8;
+    background-image:
+      radial-gradient(ellipse 95% 75% at 100% 100%, rgba(255, 255, 255, 0.38) 0%, transparent 62%),
+      radial-gradient(ellipse 85% 70% at 0% 0%, rgba(15, 36, 71, 0.55) 0%, transparent 68%),
+      radial-gradient(ellipse 50% 40% at 92% 88%, rgba(120, 210, 255, 0.2) 0%, transparent 58%),
+      linear-gradient(145deg, #0f4a82 0%, #1a6fb8 32%, #2d8fd4 58%, #5ec4f5 100%);
+  }
+
+  .bg-hero-spa::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    opacity: 0.22;
+    background-image:
+      url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.75' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E"),
+      repeating-linear-gradient(
+        298deg,
+        rgba(255, 255, 255, 0.07) 0 1px,
+        transparent 1px 9px
+      ),
+      repeating-linear-gradient(
+        208deg,
+        rgba(255, 255, 255, 0.05) 0 1px,
+        transparent 1px 11px
+      );
+    background-size: 180px 180px, auto, auto;
+    mix-blend-mode: soft-light;
+    pointer-events: none;
+    z-index: 0;
+  }
+
+  .bg-hero-spa::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    background: rgba(15, 36, 71, 0.1);
+    pointer-events: none;
+    z-index: 1;
+  }
+
+  .bg-hero-spa > * {
+    position: relative;
+    z-index: 2;
+  }
+
+  /* Good Dogs Take Baths — ad branding */
+  .tagline-sticker {
+    display: inline-block;
+    padding: 0.5rem 0.75rem;
+    background: white;
+    border-radius: 20px;
+    box-shadow: 0 4px 0 rgba(0, 0, 0, 0.08);
+    transform: rotate(-1deg);
+  }
+
+  .tagline-good-dogs {
+    @apply font-black leading-none tracking-tight;
+    line-height: 1.05;
+  }
+
+  .tagline-good {
+    color: var(--accent-hot);
+    text-shadow: 2px 2px 0 white;
+  }
+
+  .tagline-dogs {
+    color: var(--brand-sky);
+    text-shadow: 2px 2px 0 white;
+  }
+
+  .tagline-take-baths {
+    font-family: var(--font-caveat), "Caveat", cursive;
+    color: var(--brand);
+    @apply font-bold leading-tight mt-1;
+    transform: rotate(-2deg);
+  }
+
+  .bg-section-pattern-blue {
+    background-color: var(--brand-light);
+    background-image: linear-gradient(135deg, rgba(1, 129, 226, 0.06) 25%, transparent 25%),
+      linear-gradient(225deg, rgba(1, 129, 226, 0.06) 25%, transparent 25%);
+    background-size: 40px 40px;
+  }
+
+  .bg-section-pattern-white {
+    @apply bg-white;
+    background-image: linear-gradient(135deg, rgba(242, 23, 158, 0.04) 25%, transparent 25%);
+    background-size: 32px 32px;
+  }
+
+  /* Zoomin image styles */
+  .img-zoomin {
+    @apply object-cover;
+    border-radius: 80px 0 80px 0;
+  }
+
+  .img-blog {
+    @apply object-cover;
+    border-radius: 80px 0 80px 0;
+    box-shadow: 0 0 5px #dedede;
+  }
+
+  .img-review-card {
+    border-radius: 50px;
+  }
+
+  .img-avatar {
+    border-radius: 80px;
+    border: 5px solid #fff;
+  }
+
+  .site-heading-hero {
+    @apply font-bold leading-[1.15];
+    color: var(--brand);
+    font-size: clamp(2.25rem, 6vw, 3.5rem);
+  }
+
+  .site-heading-on-pink {
+    @apply font-bold leading-[1.15] text-white;
+    font-size: clamp(2.25rem, 6vw, 3.5rem);
+  }
+
+  .site-heading-on-pink .site-heading-pink,
+  .site-heading-on-pink span {
+    color: white;
+  }
+
+  .site-heading-section-on-pink {
+    @apply font-bold leading-[1.2] text-center relative text-white;
+    font-size: clamp(1.75rem, 4vw, 2.75rem);
+  }
+
+  .site-heading-section-on-pink::after {
+    content: "";
+    display: block;
+    width: 48px;
+    height: 4px;
+    background-color: white;
+    border-radius: 9999px;
+    margin: 0.75rem auto 0;
+  }
+
+  .site-heading-section-on-pink.site-heading-section-left::after {
+    margin-left: 0;
+  }
+
+  .text-on-pink {
+    color: white;
+  }
+
+  .text-on-pink-muted {
+    color: rgba(255, 255, 255, 0.92);
+  }
+
+  .link-on-pink {
+    @apply font-semibold text-white hover:text-white/85 hover:underline transition-colors;
+  }
+
+  .site-heading-section {
+    @apply font-bold leading-[1.2] text-center relative;
+    color: var(--brand);
+    font-size: clamp(1.75rem, 4vw, 2.75rem);
+  }
+
+  .site-heading-section::after {
+    content: "";
+    display: block;
+    width: 48px;
+    height: 4px;
+    background-color: var(--accent);
+    border-radius: 9999px;
+    margin: 0.75rem auto 0;
+  }
+
+  .site-heading-section-left::after {
+    margin-left: 0;
+  }
+
+  .site-heading-pink {
+    color: var(--accent);
+  }
+
+  .site-btn {
+    @apply inline-flex items-center justify-center gap-2 px-8 py-3.5 text-white text-base font-bold transition-colors shadow-md;
+    border-radius: 50px;
+    background-color: var(--accent);
+  }
+
+  .site-btn:hover {
+    background-color: var(--accent-hot);
+  }
+
+  .site-btn.site-btn-hero {
+    background-color: white;
+    color: var(--brand);
+    box-shadow:
+      0 4px 18px rgba(15, 36, 71, 0.22),
+      0 0 0 1px rgba(255, 255, 255, 0.65),
+      0 0 0 4px rgba(255, 255, 255, 0.18);
+  }
+
+  .site-btn.site-btn-hero:hover {
+    background-color: #ffffff;
+    color: var(--brand-dark);
+    box-shadow:
+      0 8px 28px rgba(15, 36, 71, 0.28),
+      0 0 0 1px rgba(255, 255, 255, 0.8),
+      0 0 0 5px rgba(255, 255, 255, 0.28);
+  }
+
+  .site-btn.site-btn-hero-attention {
+    animation: hero-btn-attention 30s ease-in-out infinite;
+  }
+
+  @keyframes hero-btn-attention {
+    0%,
+    96% {
+      transform: translateY(0) scale(1);
+      box-shadow:
+        0 4px 18px rgba(15, 36, 71, 0.22),
+        0 0 0 1px rgba(255, 255, 255, 0.65),
+        0 0 0 4px rgba(255, 255, 255, 0.18);
+    }
+
+    97% {
+      transform: translateY(-3px) scale(1.04);
+      box-shadow:
+        0 12px 32px rgba(15, 36, 71, 0.32),
+        0 0 0 1px rgba(255, 255, 255, 0.9),
+        0 0 0 8px rgba(255, 255, 255, 0.35);
+    }
+
+    98% {
+      transform: translateY(0) scale(1.01) rotate(-1.5deg);
+    }
+
+    99% {
+      transform: translateY(0) scale(1.01) rotate(1.5deg);
+    }
+
+    100% {
+      transform: translateY(0) scale(1);
+      box-shadow:
+        0 4px 18px rgba(15, 36, 71, 0.22),
+        0 0 0 1px rgba(255, 255, 255, 0.65),
+        0 0 0 4px rgba(255, 255, 255, 0.18);
+    }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .site-btn.site-btn-hero-attention {
+      animation: none;
+    }
+  }
+
+  .site-btn-outline {
+    @apply inline-flex items-center justify-center gap-2 px-6 py-3 border-2 text-sm font-bold transition-colors;
+    border-radius: 50px;
+    border-color: var(--brand);
+    color: var(--brand);
+  }
+
+  .site-btn-outline:hover {
+    background-color: var(--brand);
+    @apply text-white;
+  }
+
+  .site-link {
+    @apply font-bold hover:underline;
+    color: var(--accent);
+  }
+
+  .site-card {
+    @apply bg-white rounded-2xl shadow-sm border border-gray-200 hover:border-gray-300 hover:shadow-md transition-all;
+  }
+
+  .van-capacity-slots-list {
+    @apply max-h-72 overflow-y-auto space-y-1.5 pr-1;
+  }
+
+  .interview-booking-fold {
+    @apply pt-3 pb-4 md:pt-5 md:pb-6;
+    min-height: calc(100dvh - 4rem);
+  }
+
+  @media (min-width: 768px) {
+    .interview-booking-fold {
+      min-height: calc(100dvh - 4.5rem);
+    }
+  }
+
+  .interview-booking-card {
+    @apply site-card p-3.5 sm:p-4 md:p-5;
+  }
+
+  .interview-booking-title {
+    @apply text-lg sm:text-xl font-bold text-brand text-center leading-tight;
+  }
+
+  .interview-booking-meta {
+    @apply text-xs sm:text-sm text-gray-600 text-center mt-1 leading-snug;
+  }
+
+  .interview-booking-label {
+    @apply block text-xs font-semibold text-gray-800 mb-1;
+  }
+
+  .interview-booking-input {
+    @apply w-full px-3 py-2 border border-gray-200 rounded-xl text-sm focus:ring-2 focus:ring-brand-bright/30 focus:border-brand-bright outline-none;
+  }
+
+  .interview-slot-btn {
+    @apply rounded-lg px-1.5 py-2 text-xs sm:text-sm font-semibold border transition-colors;
+  }
+
+  .interview-date-nav-btn {
+    @apply booking-form-ghost-btn flex h-9 w-9 shrink-0 items-center justify-center rounded-lg text-lg font-semibold leading-none disabled:opacity-30 disabled:cursor-not-allowed;
+  }
+
+  .site-check {
+    @apply w-5 h-5 rounded-full flex items-center justify-center shrink-0;
+    background-color: var(--accent-light);
+  }
+
+  .site-check svg {
+    color: var(--accent);
+  }
+
+  .site-check-on-pink {
+    @apply w-5 h-5 rounded-full flex items-center justify-center shrink-0 bg-white/25;
+  }
+
+  .site-check-on-pink svg {
+    color: white;
+  }
+
+  .site-step-badge {
+    @apply w-12 h-12 rounded-full text-white font-bold text-lg flex items-center justify-center mx-auto mb-4 shadow-md;
+    background-color: var(--accent);
+  }
+
+  /* Booking modal + /book — grey/black copy, navy accents on selection + icons */
+  .booking-form-card {
+    @apply bg-white rounded-2xl shadow-2xl overflow-hidden border border-gray-200;
+    box-shadow: 0 25px 50px -12px rgba(15, 23, 42, 0.12);
+  }
+
+  .booking-form-heading {
+    @apply text-base font-bold text-gray-900;
+  }
+
+  .booking-form-subheading {
+    @apply text-xs text-gray-600 mt-1;
+  }
+
+  .booking-form-discount {
+    @apply rounded-lg border border-green-200 bg-green-50 px-3 py-2 text-xs font-semibold text-green-800;
+  }
+
+  .booking-form-summary {
+    @apply rounded-2xl border-2 border-green-300 bg-green-50 px-4 py-4 text-center;
+  }
+
+  .booking-form-summary-title {
+    @apply text-xl font-bold text-green-700 tracking-tight;
+  }
+
+  .booking-form-summary-box {
+    @apply rounded-lg bg-white border border-gray-200 p-3 text-xs text-gray-700;
+  }
+
+  .booking-form-input {
+    @apply w-full px-3 py-2.5 border border-gray-300 rounded-xl text-sm text-gray-900 bg-white outline-none transition-colors;
+  }
+
+  .booking-form-input::placeholder {
+    @apply text-gray-400;
+  }
+
+  .booking-form-input:focus {
+    @apply ring-2 ring-gray-200 border-gray-400;
+  }
+
+  .booking-form-step-active {
+    @apply bg-brand text-white border border-brand;
+  }
+
+  .booking-form-step-inactive {
+    @apply bg-white text-gray-600 border border-gray-300;
+  }
+
+  .booking-form-step-line-active {
+    @apply bg-brand;
+  }
+
+  .booking-form-step-line-inactive {
+    @apply bg-gray-200;
+  }
+
+  .booking-form-option {
+    @apply border border-gray-300 bg-white text-gray-900 hover:bg-gray-50 active:bg-gray-100;
+  }
+
+  .booking-form-option-service {
+    @apply border border-gray-300 bg-white text-gray-900 hover:bg-brand-light/45 active:bg-brand-light/60;
+  }
+
+  .booking-form-option-selected {
+    @apply border-2 border-brand bg-brand text-white;
+  }
+
+  .booking-form-quantity-btn {
+    @apply booking-form-ghost-btn flex h-10 w-10 shrink-0 items-center justify-center rounded-xl text-lg font-semibold leading-none disabled:opacity-30 disabled:cursor-not-allowed;
+  }
+
+  .booking-form-icon-wrap {
+    @apply flex items-center justify-center rounded-xl border border-brand bg-transparent p-1.5;
+  }
+
+  .booking-form-icon-wrap-selected {
+    @apply border-2 border-brand bg-transparent;
+  }
+
+  .booking-form-slot-list {
+    @apply overflow-hidden rounded-lg border border-gray-200 bg-white;
+  }
+
+  .booking-form-slot {
+    @apply bg-white text-gray-900 hover:bg-gray-50 active:scale-[0.995];
+  }
+
+  .booking-form-slot-selected {
+    @apply bg-brand text-white border-brand;
+  }
+
+  .booking-form-success-icon {
+    @apply w-14 h-14 bg-white rounded-full flex items-center justify-center mx-auto mb-4 border-2 border-gray-200;
+  }
+
+  .booking-form-ghost-btn {
+    @apply border border-gray-300 bg-white text-gray-700 hover:bg-gray-50 hover:border-gray-400;
+  }
+
+  /* Admin / staff portal */
+  .admin-input {
+    @apply w-full px-4 py-3 border border-gray-200 rounded-xl text-gray-900 bg-white outline-none transition-colors;
+  }
+
+  .admin-input:focus {
+    @apply ring-2 ring-accent/20 border-accent/50;
+  }
+
+  .admin-login-heading {
+    @apply font-serif font-bold text-brand text-2xl text-center mb-2;
+  }
+
+  .admin-login-heading::after {
+    content: "";
+    display: block;
+    width: 40px;
+    height: 3px;
+    background-color: var(--accent);
+    border-radius: 9999px;
+    margin: 0.5rem auto 0;
+  }
+}
+
+@layer utilities {
+  .text-balance {
+    text-wrap: balance;
+  }
+
+  .hide-scrollbar {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+  }
+
+  .hide-scrollbar::-webkit-scrollbar {
+    display: none;
+  }
+
+  .scrollbar-grey {
+    scrollbar-width: thin;
+    scrollbar-color: #9ca3af #f3f4f6;
+  }
+
+  .scrollbar-grey::-webkit-scrollbar {
+    width: 8px;
+  }
+
+  .scrollbar-grey::-webkit-scrollbar-track {
+    background: #f3f4f6;
+  }
+
+  .scrollbar-grey::-webkit-scrollbar-thumb {
+    background: #9ca3af;
+    border-radius: 4px;
+  }
+
+  .scrollbar-grey::-webkit-scrollbar-thumb:hover {
+    background: #6b7280;
+  }
+}
+
+::-webkit-scrollbar {
+  width: 8px;
+}
+::-webkit-scrollbar-track {
+  background: #f1f1f1;
+}
+::-webkit-scrollbar-thumb {
+  background: #9ca3af;
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #6b7280;
+}
+
+/* A2P verification page — GHL script runs; hide chat launcher UI */
+body:has(.a2p-verification-page) #lc-widget-launcher,
+body:has(.a2p-verification-page) #chat-widget-container,
+body:has(.a2p-verification-page) #lc-widget-launcher-frame,
+body:has(.a2p-verification-page) iframe[src*="leadconnectorhq.com/chat"] {
+  display: none !important;
+  visibility: hidden !important;
+  pointer-events: none !important;
+}
+
+/*
+ * Van shift navy shades — outside @layer so Tailwind purge cannot strip shades 2–4.
+ * 1 block (3h) = lightest · 4 blocks (12h) = darkest.
+ */
+.van-slot-shade-1,
+.van-slot-shade-2,
+.van-slot-shade-3,
+.van-slot-shade-4 {
+  border-width: 1px;
+  border-style: solid;
+  color: #1b3a6e;
+}
+
+.van-slot-shade-1 {
+  border-color: #a8bdd4;
+  background-color: #dce8f4;
+}
+
+.van-slot-shade-2 {
+  border-color: #7a94b8;
+  background-color: #b8cde3;
+}
+
+.van-slot-shade-3 {
+  border-color: #5578a0;
+  background-color: #94b0cf;
+}
+
+.van-slot-shade-4 {
+  border-color: #3d5f85;
+  background-color: #7095bc;
+}
+
+@media (min-width: 768px) {
+  .van-slot-shade-1:hover,
+  .van-slot-shade-2:hover,
+  .van-slot-shade-3:hover,
+  .van-slot-shade-4:hover {
+    filter: brightness(0.96);
+  }
+}

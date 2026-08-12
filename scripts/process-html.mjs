@@ -300,6 +300,57 @@ function injectContactPatch(html) {
   return html + CONTACT_FORM_PATCH;
 }
 
+const FOOTER_COPYRIGHT_RE =
+  /© 2025 <span style="color: #EC1D25;"><b>Dermlounge<\/b><\/span>\. All Rights Reserved/g;
+
+const STAFF_LOGIN_FOOTER_ITEM = `
+  
+              
+    <li>
+                      
+            
+            
+
+    
+    
+    
+    
+    
+    <a class="breakdance-link bde-icon-list__item-wrapper" href="/admin/login/" target="_self" data-type="url"  >
+
+      
+      <span class='bde-icon-list__icon'>
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><path d="M224 256c70.7 0 128-57.3 128-128S294.7 0 224 0 96 57.3 96 128s57.3 128 128 128zm89.6 32h-16.7c-22.2 10.2-46.9 16-72.9 16s-50.6-5.8-72.9-16h-16.7C60.2 288 0 348.2 0 422.4V464c0 26.5 21.5 48 48 48h352c26.5 0 48-21.5 48-48v-41.6c0-74.2-60.2-134.4-134.4-134.4z"/></svg>
+      </span>
+      <span class='bde-icon-list__text' >
+      Staff Login
+      </span>
+                  </a>
+
+      
+    </li>`;
+
+/** @param {string} html */
+function updateFooterCopyright(html) {
+  return html.replace(
+    FOOTER_COPYRIGHT_RE,
+    '© 2026 <span style="color: #EC1D25;"><b>Dermlounge</b></span>. All Rights Reserved'
+  );
+}
+
+/** @param {string} html */
+function injectStaffLoginLink(html) {
+  if (!html.includes("bde-icon-list-42-119")) return html;
+  if (html.includes('href="/admin/login/"') || html.includes('href="/admin/login"')) {
+    return html;
+  }
+
+  return html.replace(
+    /(<div class="bde-icon-list-42-119 bde-icon-list">[\s\S]*?<span class='bde-icon-list__text' >\s*Terms & Conditions\s*<\/span>[\s\S]*?<\/li>)/,
+    `$1${STAFF_LOGIN_FOOTER_ITEM}`
+  );
+}
+
 /** @param {string} html */
 /** @param {string} html @param {{ humanVisibleEmail?: boolean }} [options] */
 function processHtml(html, options = {}) {
@@ -321,6 +372,8 @@ function processHtml(html, options = {}) {
   out = protectEmails(out, { humanVisible: options.humanVisibleEmail === true });
   out = addClsGuards(out);
   out = injectContactPatch(out);
+  out = updateFooterCopyright(out);
+  out = injectStaffLoginLink(out);
   return out;
 }
 

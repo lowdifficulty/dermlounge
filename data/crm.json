@@ -1,0 +1,54 @@
+{
+  "contacts": [
+    {
+      "id": "e9402a19-7653-44bf-b70b-e48f39ba77c6",
+      "phone": "5551234567",
+      "phoneE164": "+15551234567",
+      "fullName": "5551234567",
+      "pets": [],
+      "appointmentIds": [],
+      "medicalService": "wound_care",
+      "service": "Advanced Wound Care",
+      "status": "lead",
+      "tags": [
+        "sms-inbound",
+        "wound-care"
+      ],
+      "source": "contact",
+      "unreadCount": 0,
+      "botEnabled": true,
+      "createdAt": "2026-08-12T20:07:19.557Z",
+      "updatedAt": "2026-08-12T23:29:07.750Z",
+      "lastInteractionAt": "2026-08-12T20:16:27.284Z",
+      "lastInboundAt": "2026-08-12T20:16:27.284Z"
+    }
+  ],
+  "interactions": [
+    {
+      "id": "c0eea6ad-4018-489c-9df1-93f3677b4a89",
+      "contactId": "e9402a19-7653-44bf-b70b-e48f39ba77c6",
+      "phone": "5551234567",
+      "channel": "sms",
+      "direction": "inbound",
+      "body": "test",
+      "summary": "Inbound SMS",
+      "messageStatus": "received",
+      "actor": "customer",
+      "createdAt": "2026-08-12T20:07:19.559Z"
+    },
+    {
+      "id": "10e6f161-44d3-4dcf-990c-dd145679ce29",
+      "contactId": "e9402a19-7653-44bf-b70b-e48f39ba77c6",
+      "phone": "5551234567",
+      "channel": "sms",
+      "direction": "inbound",
+      "body": "ping",
+      "summary": "Inbound SMS",
+      "messageStatus": "received",
+      "actor": "customer",
+      "createdAt": "2026-08-12T20:16:27.284Z"
+    }
+  ],
+  "seededAt": "2026-08-12T20:07:19.551Z",
+  "version": 1
+}
