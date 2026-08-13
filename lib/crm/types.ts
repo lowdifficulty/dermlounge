@@ -15,7 +15,8 @@ export type CrmContactSource =
   | "client_portal"
   | "appointment"
   | "import"
-  | "heyflow";
+  | "heyflow"
+  | "manual";
 
 export type CrmInteractionChannel = "sms" | "call" | "note" | "email" | "system";
 

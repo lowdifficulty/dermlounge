@@ -4,6 +4,7 @@ import type { Appointment } from "@/lib/scheduling/types";
 import { ensureCrmSeeded } from "./seed";
 import {
   appendInteraction,
+  findContactById,
   findContactByPhone,
   newContactId,
   newInteractionId,
@@ -208,9 +209,10 @@ export async function sendStaffSms(options: {
   const body = options.body.trim();
   if (!body) return { ok: false, error: "Message body is required" };
 
-  const contact = options.contactId
-    ? (await findContactByPhone(options.phone)) || (await ensureContactForPhone(options.phone))
-    : await ensureContactForPhone(options.phone);
+  const contact =
+    (options.contactId ? await findContactById(options.contactId) : null) ||
+    (await findContactByPhone(options.phone)) ||
+    (await ensureContactForPhone(options.phone));
 
   const result = await sendSms(contact.phoneE164 || contact.phone, body);
   const now = new Date().toISOString();

@@ -18,6 +18,7 @@ import {
 } from "@/lib/crm/medical-service-crm-colors";
 import { useStaffCallbackPhone } from "@/lib/twilio/use-staff-callback-phone";
 import { useStaffDialerPanel } from "@/lib/twilio/staff-dialer-context";
+import CreateContactForm from "@/components/crm/CreateContactForm";
 
 type Platform = {
   configured: boolean;
@@ -193,6 +194,42 @@ export default function CrmPanel() {
       setMobileThreadOpen(true);
       setMobileDetailsOpen(false);
     }
+  }
+
+  async function handleContactCreated(
+    contact: { id: string; phone?: string; fullName?: string },
+    created: boolean
+  ) {
+    setView("all");
+    setUnreadOnly(false);
+    setQ("");
+    setBanner(
+      created
+        ? "Contact created — send a text below"
+        : "Contact already exists — send a text below"
+    );
+    setError(null);
+    setContacts((prev) => {
+      if (prev.some((c) => c.id === contact.id)) return prev;
+      return [
+        {
+          id: contact.id,
+          phone: contact.phone || "",
+          phoneE164: "",
+          pets: [],
+          status: "lead",
+          tags: [],
+          source: "manual",
+          unreadCount: 0,
+          botEnabled: true,
+          updatedAt: new Date().toISOString(),
+          fullName: contact.fullName,
+        },
+        ...prev,
+      ];
+    });
+    openConversation(contact.id);
+    await loadDetail(contact.id);
   }
 
   function backToConversationList() {
@@ -433,6 +470,10 @@ export default function CrmPanel() {
         {/* Conversations list */}
         <section className={`${paneClass(showListPane)} border-r border-gray-200 bg-white`}>
           <div className="p-3 border-b border-gray-100 space-y-2">
+            <CreateContactForm
+              compact
+              onCreated={(contact, created) => void handleContactCreated(contact, created)}
+            />
             <input
               value={q}
               onChange={(e) => setQ(e.target.value)}
@@ -531,7 +572,7 @@ export default function CrmPanel() {
         <section className={`${paneClass(showThreadPane)} bg-[#f5f7fb] border-r border-gray-200`}>
           {!selected && (
             <div className="flex-1 flex items-center justify-center text-sm text-gray-500 px-4 text-center">
-              Select a conversation to read and reply.
+              Select a conversation, or create a contact to send the first text.
             </div>
           )}
           {selected && (

@@ -4,6 +4,7 @@ import { useCallback, useEffect, useState } from "react";
 import { formatPhoneDisplay } from "@/lib/leads/normalize";
 import type { CrmContactListItem, CrmContactSortField } from "@/lib/crm/types";
 import { getMedicalService, medicalServiceTabLabel } from "@/lib/medical-services";
+import CreateContactForm from "@/components/crm/CreateContactForm";
 
 type CrmContact = CrmContactListItem;
 
@@ -241,6 +242,17 @@ export default function CrmContactsPanel({
         >
           {busy ? "Syncing…" : "Sync from bookings"}
         </button>
+        <CreateContactForm
+          onCreated={(contact, created) => {
+            setBanner(
+              created
+                ? "Contact created — send a text from the conversation"
+                : "Contact already exists — send a text from the conversation"
+            );
+            void loadContacts();
+            onOpenConversation?.(contact.id);
+          }}
+        />
       </div>
 
       <div className="bg-white border border-gray-200 rounded-xl overflow-hidden">

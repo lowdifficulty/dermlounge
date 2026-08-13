@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { requireStaff } from "@/lib/scheduling/auth";
-import { listCrmContacts, refreshCrm } from "@/lib/crm/service";
+import { createManualContact, listCrmContacts, refreshCrm } from "@/lib/crm/service";
 import type { CrmContactSortField, CrmConversationView } from "@/lib/crm/types";
 import { isCrmConversationView } from "@/lib/medical-services";
 
@@ -51,13 +51,38 @@ export async function GET(request: Request) {
 export async function POST(request: Request) {
   try {
     await requireStaff();
-    const body = (await request.json().catch(() => ({}))) as { action?: string };
+  } catch {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
+
+  try {
+    const body = (await request.json().catch(() => ({}))) as {
+      action?: string;
+      phone?: string;
+      firstName?: string;
+      lastName?: string;
+      email?: string;
+      medicalService?: string;
+    };
     if (body.action === "refresh") {
       const result = await refreshCrm();
       return NextResponse.json({ ok: true, ...result });
     }
+    if (body.action === "create") {
+      const result = await createManualContact({
+        phone: body.phone || "",
+        firstName: body.firstName,
+        lastName: body.lastName,
+        email: body.email,
+        medicalService: body.medicalService,
+      });
+      return NextResponse.json({ ok: true, ...result });
+    }
     return NextResponse.json({ error: "Unknown action" }, { status: 400 });
-  } catch {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  } catch (err) {
+    return NextResponse.json(
+      { error: err instanceof Error ? err.message : "Request failed" },
+      { status: 400 }
+    );
   }
 }

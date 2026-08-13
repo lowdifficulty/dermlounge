@@ -9,14 +9,17 @@ import {
 import { getPersistenceMode } from "@/lib/scheduling/persistence";
 import {
   findContactById,
+  findContactByPhone,
   invalidateCrmReadCache,
   listInteractionsForContact,
   listRecentInteractions,
   markContactRead,
+  newContactId,
   readCrmData,
   setContactBotEnabled,
+  upsertContact,
 } from "./store";
-import { displayNameFromContact } from "./phone";
+import { crmPhoneDigits, crmPhoneE164, displayNameFromContact } from "./phone";
 import {
   extractAreaCode,
   getContactServiceZone,
@@ -386,4 +389,53 @@ export async function updateContactBot(
   botEnabled: boolean
 ): Promise<CrmContact | null> {
   return setContactBotEnabled(contactId, botEnabled);
+}
+
+export async function createManualContact(input: {
+  phone: string;
+  firstName?: string;
+  lastName?: string;
+  email?: string;
+  medicalService?: string;
+}): Promise<{ contact: CrmContact; created: boolean }> {
+  await ensureCrmSeeded();
+  const digits = crmPhoneDigits(input.phone);
+  if (digits.length < 10) {
+    throw new Error("Enter a valid 10-digit US phone number");
+  }
+
+  const existing = await findContactByPhone(digits);
+  if (existing) {
+    return { contact: existing, created: false };
+  }
+
+  const now = new Date().toISOString();
+  const serviceId = resolveMedicalServiceId({ medicalService: input.medicalService });
+  const def = getMedicalService(serviceId);
+  const firstName = input.firstName?.trim() || undefined;
+  const lastName = input.lastName?.trim() || undefined;
+  const email = input.email?.trim() || undefined;
+  const contact: CrmContact = {
+    id: newContactId(),
+    phone: digits,
+    phoneE164: crmPhoneE164(input.phone) ?? `+1${digits}`,
+    firstName,
+    lastName,
+    fullName: displayNameFromContact({ firstName, lastName, phone: digits }),
+    email,
+    pets: [],
+    appointmentIds: [],
+    medicalService: serviceId,
+    service: def.label,
+    status: "lead",
+    tags: ["manual", def.crmTag],
+    source: "manual",
+    unreadCount: 0,
+    botEnabled: true,
+    createdAt: now,
+    updatedAt: now,
+    lastInteractionAt: now,
+  };
+
+  return { contact: await upsertContact(contact), created: true };
 }
