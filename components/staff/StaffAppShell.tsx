@@ -163,6 +163,8 @@ export default function StaffAppShell(props: {
   storageKey?: string;
   showDialer?: boolean;
   headerTitle?: string;
+  /** CRM-style views fill the pane and scroll internally. Other views scroll the page. */
+  lockViewport?: boolean;
   children: React.ReactNode;
 }) {
   return (
@@ -182,6 +184,7 @@ function StaffAppShellInner({
   storageKey = "dl-staff-sidebar-collapsed",
   showDialer = false,
   headerTitle,
+  lockViewport = false,
   children,
 }: {
   title: string;
@@ -193,6 +196,7 @@ function StaffAppShellInner({
   storageKey?: string;
   showDialer?: boolean;
   headerTitle?: string;
+  lockViewport?: boolean;
   children: React.ReactNode;
 }) {
   const [collapsed, setCollapsed] = useState(false);
@@ -403,7 +407,13 @@ function StaffAppShellInner({
             </button>
           )}
         </header>
-        <main className="flex-1 min-h-0 overflow-hidden flex flex-col">{children}</main>
+        <main
+          className={`flex-1 min-h-0 flex flex-col ${
+            lockViewport ? "overflow-hidden" : "overflow-y-auto overflow-x-hidden overscroll-y-contain"
+          }`}
+        >
+          {children}
+        </main>
         {showDialer && dialerOpen && (
           <StaffDialerPopup prefillPhone={prefillPhone} onClose={closeDialer} />
         )}

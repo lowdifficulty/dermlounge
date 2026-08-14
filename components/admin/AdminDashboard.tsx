@@ -38,8 +38,6 @@ export default function AdminDashboard() {
     setTab("crm");
   }
 
-  const padded = tab !== "crm";
-
   return (
     <AdminAppShell
       title="Admin"
@@ -47,8 +45,9 @@ export default function AdminDashboard() {
       activeId={tab}
       onSelect={(id) => setTab(id as Tab)}
       onLogout={logout}
+      lockViewport={tab === "crm"}
     >
-      <div className={padded ? "p-4 md:p-6" : "h-full min-h-0 overflow-hidden"}>
+      <div className={tab === "crm" ? "h-full min-h-0 overflow-hidden" : "p-4 md:p-6"}>
         {tab === "crm" && <CrmPanel />}
         {tab === "contacts" && (
           <CrmContactsPanel onOpenConversation={openCrmConversation} />

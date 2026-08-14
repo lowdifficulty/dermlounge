@@ -11,6 +11,7 @@ export default function AdminAppShell({
   onSelect,
   onLogout,
   headerTitle,
+  lockViewport,
   children,
 }: {
   title: string;
@@ -19,6 +20,7 @@ export default function AdminAppShell({
   onSelect: (id: string) => void;
   onLogout?: () => void;
   headerTitle?: string;
+  lockViewport?: boolean;
   children: React.ReactNode;
 }) {
   return (
@@ -30,6 +32,7 @@ export default function AdminAppShell({
       onSelect={onSelect}
       onLogout={onLogout}
       headerTitle={headerTitle}
+      lockViewport={lockViewport}
       storageKey="dl-admin-sidebar-collapsed"
       showDialer
     >
