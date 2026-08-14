@@ -12,6 +12,7 @@ export const companyLegal = {
 export const legalRoutes = {
   privacy: "/privacy-policy/",
   terms: "/terms-conditions/",
+  dataDeletion: "/data-deletion/",
   book: "/contact-us/",
   contact: "/contact-us/",
   a2pSample: "/contact-us/",

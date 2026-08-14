@@ -24,10 +24,19 @@ export default function sitemap(): MetadataRoute.Sitemap {
     ? new Date(manifest.generatedAt)
     : new Date();
 
-  return manifest.routes.map(({ route }) => ({
-    url: routeToUrl(route),
-    lastModified,
-    changeFrequency: "weekly",
-    priority: route === "/" ? 1 : 0.7,
-  }));
+  const routes = [
+    ...manifest.routes.map(({ route }) => ({
+      url: routeToUrl(route),
+      lastModified,
+      changeFrequency: "weekly" as const,
+      priority: route === "/" ? 1 : 0.7,
+    })),
+    {
+      url: routeToUrl("/data-deletion"),
+      lastModified: new Date(),
+      changeFrequency: "yearly" as const,
+      priority: 0.3,
+    },
+  ];
+  return routes;
 }
