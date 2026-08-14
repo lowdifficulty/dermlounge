@@ -12,7 +12,6 @@ import { recordInboundSms } from "@/lib/crm/messaging";
 import { handleInboundSmsWithBot } from "@/lib/crm/sms-bot";
 import { findContactByPhone } from "@/lib/crm/store";
 import { hasActiveSmsBotSession } from "@/lib/crm/sms-bot-session";
-import { medicalServiceContactUrl } from "@/lib/medical-services";
 
 const { name, businessPhoneDisplay, contactEmail } = companyLegal;
 
@@ -90,8 +89,5 @@ export async function POST(request: Request) {
     console.error("Inbound SMS CRM/bot failed:", err);
   }
 
-  const bookUrl = medicalServiceContactUrl(undefined, companyLegal.siteUrl);
-  return twiml(
-    `${name}: Reply HELP for help, STOP to opt out, BOOK to schedule a consultation, or visit ${bookUrl}`
-  );
+  return twiml();
 }

@@ -105,10 +105,9 @@ export default function SmsBotPanel() {
       <div>
         <h2 className="text-xl font-bold text-brand">SMS Chatbot</h2>
         <p className="text-sm text-gray-600 mt-1">
-          Wound care leads use <strong className="text-accent">+1 (714) 706-3492</strong>.
-          Keep the bot in <strong>test mode</strong> until replies look right — only allowlisted
-          phones get live TwiML replies. Edit the system prompt and custom logic below; enable{" "}
-          <strong>consultation actions</strong> for YES/NO consultation callback flows.
+          Automatic SMS is off until the Meta/CRM flow is locked. Wound care line{" "}
+          <strong className="text-accent">+1 (714) 706-3492</strong>. Leave the bot
+          unchecked (or in test mode) until replies are approved.
         </p>
       </div>
 

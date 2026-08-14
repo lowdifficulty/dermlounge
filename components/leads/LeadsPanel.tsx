@@ -77,7 +77,7 @@ interface LeadRow {
   visitOutcome: VisitOutcome;
   listStatus: LeadListStatus;
   notes: LeadNote[];
-  source: "booking" | "booking-hb" | "booking-oc" | "booking-jessica" | "booking-melanie" | "contact" | "franchise" | "heyflow";
+  source: "booking" | "booking-hb" | "booking-oc" | "booking-jessica" | "booking-melanie" | "contact" | "contact_form" | "meta" | "franchise" | "heyflow";
   followUpDue?: boolean;
   currentlyActive?: boolean;
 }
@@ -940,9 +940,11 @@ export default function LeadsPanel({
                           <span className="text-gray-400">Source:</span>{" "}
                           {lead.source === "heyflow"
                             ? "Heyflow"
-                            : lead.source === "contact"
-                              ? "Contact form"
-                              : "Booking"}
+                            : lead.source === "meta"
+                              ? "Meta Lead Ads"
+                              : lead.source === "contact" || lead.source === "contact_form"
+                                ? "Contact form"
+                                : "Booking"}
                         </p>
                         <p>
                           <span className="text-gray-400">Pets:</span> {formatLeadPets(lead)}

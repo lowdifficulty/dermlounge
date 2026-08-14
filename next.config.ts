@@ -11,6 +11,9 @@ const nextConfig: NextConfig = {
       { source: `${source}/`, destination, permanent: true },
     ]);
   },
+  async rewrites() {
+    return [{ source: "/api/meta/leads", destination: "/api/meta/leads/" }];
+  },
   images: {
     remotePatterns: [
       {

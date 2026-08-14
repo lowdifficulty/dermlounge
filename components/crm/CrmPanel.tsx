@@ -95,14 +95,6 @@ type ContactDetail = CrmContact & {
   }[];
 };
 
-type Stats = {
-  total: number;
-  leads: number;
-  customers: number;
-  inactive: number;
-  unread: number;
-};
-
 function formatWhen(iso?: string): string {
   if (!iso) return "—";
   try {
@@ -149,7 +141,6 @@ export default function CrmPanel() {
   const isLargeScreen = useMediaQuery("(min-width: 1024px)");
   const deepLinkContactId = useRef<string | null>(null);
   const [contacts, setContacts] = useState<CrmContact[]>([]);
-  const [stats, setStats] = useState<Stats | null>(null);
   const [platform, setPlatform] = useState<Platform | null>(null);
   const [selectedId, setSelectedId] = useState(() => {
     if (typeof window === "undefined") return "";
@@ -249,7 +240,6 @@ export default function CrmPanel() {
       if (!res.ok) throw new Error("Could not load CRM contacts");
       const data = await res.json();
       setContacts(data.contacts ?? []);
-      setStats(data.stats ?? null);
       setPlatform(data.platform ?? null);
       if (!selectedId && data.contacts?.[0]?.id && isLargeScreen) {
         setSelectedId(data.contacts[0].id);
@@ -428,15 +418,8 @@ export default function CrmPanel() {
 
   return (
     <div className="h-[calc(100dvh-3.5rem)] flex flex-col min-h-0">
-      {(banner || error || platform) && (
+      {(banner || error || platform?.crmStorage === "file") && (
         <div className="px-4 py-2 border-b border-gray-200 bg-white flex flex-wrap gap-3 items-center text-xs">
-          {platform && (
-            <span className="text-gray-500">
-              Twilio {platform.configured ? "ready" : "needs setup"} · SMS bot{" "}
-              {platform.smsBotEnabled ? `on (${platform.smsBotMode || "test"})` : "off"}
-              {platform.crmStorage === "file" ? " · CRM: local file (inbound SMS only on production Redis)" : platform.crmStorage === "redis" ? " · CRM: live" : null}
-            </span>
-          )}
           {platform?.crmStorage === "file" && (
             <span className="text-amber-800 bg-amber-50 border border-amber-200 rounded-lg px-2 py-1">
               Inbound texts are stored on production only. Paste KV credentials into{" "}
@@ -448,19 +431,6 @@ export default function CrmPanel() {
               .
             </span>
           )}
-          {stats && (
-            <span className="text-gray-500">
-              {stats.total} contacts · {stats.unread} unread
-            </span>
-          )}
-          <button
-            type="button"
-            onClick={() => void refreshFromSources()}
-            disabled={busy === "refresh"}
-            className="ml-auto font-semibold text-brand hover:underline disabled:opacity-50"
-          >
-            Sync customers
-          </button>
           {banner && <span className="text-gray-700 font-medium">{banner}</span>}
           {error && <span className="text-red-700 font-medium">{error}</span>}
         </div>
@@ -474,12 +444,23 @@ export default function CrmPanel() {
               compact
               onCreated={(contact, created) => void handleContactCreated(contact, created)}
             />
-            <input
-              value={q}
-              onChange={(e) => setQ(e.target.value)}
-              placeholder="Search conversations…"
-              className="w-full rounded-lg border border-gray-200 bg-[#f8fafc] px-3 py-2 text-sm"
-            />
+            <div className="flex items-center gap-2">
+              <input
+                value={q}
+                onChange={(e) => setQ(e.target.value)}
+                placeholder="Search conversations…"
+                className="min-w-0 flex-1 rounded-lg border border-gray-200 bg-[#f8fafc] px-3 py-2 text-sm"
+              />
+              <button
+                type="button"
+                onClick={() => void refreshFromSources()}
+                disabled={busy === "refresh"}
+                title="Sync customers from bookings"
+                className="shrink-0 text-xs font-semibold text-brand px-1.5 py-2 hover:underline disabled:opacity-50"
+              >
+                {busy === "refresh" ? "Syncing…" : "Sync"}
+              </button>
+            </div>
             <div className="flex flex-wrap gap-1">
               {VIEW_TABS.map((tab) => (
                 <button

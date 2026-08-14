@@ -150,6 +150,11 @@ function applyLead(contact: CrmContact, lead: Lead, nowIso: string): void {
   if (lead.source === "heyflow" && !contact.tags.includes("heyflow")) {
     contact.tags.push("heyflow");
   }
+  if (lead.source === "meta") {
+    contact.botEnabled = false;
+    contact.smsOptIn = false;
+    if (!contact.tags.includes("meta")) contact.tags.push("meta");
+  }
   void nowIso;
 }
 

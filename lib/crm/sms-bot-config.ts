@@ -30,7 +30,7 @@ export const DEFAULT_SMS_BOT_SYSTEM_PROMPT = `You are the My Derm Lounge SMS ass
 export function emptySmsBotConfig(): SmsBotConfig {
   return {
     mode: "test",
-    enabled: true,
+    enabled: false,
     useAiPolish: true,
     systemPrompt: DEFAULT_SMS_BOT_SYSTEM_PROMPT,
     customLogic: "",
@@ -57,7 +57,7 @@ function normalizeConfig(input: Partial<SmsBotConfig>): SmsBotConfig {
   const base = emptySmsBotConfig();
   return {
     mode: input.mode === "live" ? "live" : "test",
-    enabled: input.enabled !== false,
+    enabled: input.enabled === true,
     useAiPolish: input.useAiPolish !== false,
     systemPrompt: (input.systemPrompt || base.systemPrompt).trim() || base.systemPrompt,
     customLogic: (input.customLogic || "").trim(),
