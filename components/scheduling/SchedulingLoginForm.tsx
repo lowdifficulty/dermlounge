@@ -109,12 +109,6 @@ export default function SchedulingLoginForm({
               My Derm Lounge staff workspace
             </p>
           )}
-          <p>
-            <Link href="/client/login" className="font-semibold text-accent hover:text-accent-hot hover:underline">
-              Client payment portal
-            </Link>
-            {" — customers can register, save cards, and pay online."}
-          </p>
           {role === "groomer" && (
             <p>
               <Link href="/admin/login" className="font-semibold text-accent hover:text-accent-hot hover:underline">

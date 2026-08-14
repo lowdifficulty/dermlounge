@@ -21,3 +21,6 @@ export const TRACKING = {
   /** Meta Pixel is not embedded in mirrored HTML; verify via GTM if needed. */
   metaPixelInHtml: false,
 } as const;
+
+/** Customer card-on-file / pay-online portal. Keep off until billing is ready. */
+export const CLIENT_PAYMENT_PORTAL_ENABLED = false;

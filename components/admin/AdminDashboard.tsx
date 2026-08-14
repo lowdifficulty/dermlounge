@@ -6,15 +6,13 @@ import AdminAppShell, { type AdminNavItem } from "@/components/admin/AdminAppShe
 import CrmPanel from "@/components/crm/CrmPanel";
 import OpportunitiesPanel from "@/components/crm/OpportunitiesPanel";
 import PhoneSmsPanel from "@/components/admin/PhoneSmsPanel";
-import StaffLoginLogPanel from "@/components/scheduling/StaffLoginLogPanel";
 
-type Tab = "crm" | "opportunities" | "phoneSms" | "logins";
+type Tab = "crm" | "opportunities" | "phoneSms";
 
 const NAV: AdminNavItem[] = [
   { id: "crm", label: "Conversations", group: "CRM" },
   { id: "opportunities", label: "Opportunities", group: "CRM" },
   { id: "phoneSms", label: "Phone & SMS", group: "Messaging" },
-  { id: "logins", label: "Logins", group: "System" },
 ];
 
 export default function AdminDashboard() {
@@ -52,7 +50,6 @@ export default function AdminDashboard() {
           <OpportunitiesPanel onOpenConversation={openCrmConversation} />
         )}
         {tab === "phoneSms" && <PhoneSmsPanel />}
-        {tab === "logins" && <StaffLoginLogPanel />}
       </div>
     </AdminAppShell>
   );

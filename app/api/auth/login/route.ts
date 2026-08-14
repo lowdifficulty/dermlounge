@@ -1,6 +1,5 @@
 import { NextResponse } from "next/server";
 import { getSession, loginAdmin } from "@/lib/scheduling/auth";
-import { appendStaffLoginLog } from "@/lib/staff/login-log";
 
 export async function POST(request: Request) {
   const body = await request.json();
@@ -24,14 +23,6 @@ export async function POST(request: Request) {
   const session = await getSession();
   session.user = user;
   await session.save();
-
-  appendStaffLoginLog({
-    user,
-    loginIdentifier: username.trim().toLowerCase(),
-    request,
-  }).catch((err) => {
-    console.error("Staff login log failed:", err);
-  });
 
   return NextResponse.json({ success: true, user });
 }
