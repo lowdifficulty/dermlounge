@@ -5,13 +5,17 @@ import { useRouter } from "next/navigation";
 import AdminAppShell, { type AdminNavItem } from "@/components/admin/AdminAppShell";
 import CrmPanel from "@/components/crm/CrmPanel";
 import OpportunitiesPanel from "@/components/crm/OpportunitiesPanel";
+import CrmContactsPanel from "@/components/crm/CrmContactsPanel";
 import PhoneSmsPanel from "@/components/admin/PhoneSmsPanel";
+import PeoplePanel from "@/components/admin/PeoplePanel";
 
-type Tab = "crm" | "opportunities" | "phoneSms";
+type Tab = "crm" | "contacts" | "opportunities" | "people" | "phoneSms";
 
 const NAV: AdminNavItem[] = [
   { id: "crm", label: "Conversations", group: "CRM" },
+  { id: "contacts", label: "Contacts", group: "CRM" },
   { id: "opportunities", label: "Opportunities", group: "CRM" },
+  { id: "people", label: "People", group: "Admin" },
   { id: "phoneSms", label: "Phone & SMS", group: "Messaging" },
 ];
 
@@ -46,9 +50,13 @@ export default function AdminDashboard() {
     >
       <div className={padded ? "p-4 md:p-6" : ""}>
         {tab === "crm" && <CrmPanel />}
+        {tab === "contacts" && (
+          <CrmContactsPanel onOpenConversation={openCrmConversation} />
+        )}
         {tab === "opportunities" && (
           <OpportunitiesPanel onOpenConversation={openCrmConversation} />
         )}
+        {tab === "people" && <PeoplePanel />}
         {tab === "phoneSms" && <PhoneSmsPanel />}
       </div>
     </AdminAppShell>

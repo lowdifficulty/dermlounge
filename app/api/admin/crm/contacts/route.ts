@@ -3,6 +3,7 @@ import { requireStaff } from "@/lib/scheduling/auth";
 import { createManualContact, listCrmContacts, refreshCrm } from "@/lib/crm/service";
 import type { CrmContactSortField, CrmConversationView } from "@/lib/crm/types";
 import { isCrmConversationView } from "@/lib/medical-services";
+import { isCrmContactStatus } from "@/lib/crm/pipeline";
 
 const SORT_FIELDS: CrmContactSortField[] = [
   "lastInteraction",
@@ -30,9 +31,11 @@ export async function GET(request: Request) {
     const sortParam = searchParams.get("sort") as CrmContactSortField | null;
     const orderParam = searchParams.get("order");
     const viewParam = searchParams.get("view") as CrmConversationView | null;
+    const statusParam = searchParams.get("status");
     const result = await listCrmContacts({
       q: searchParams.get("q") ?? undefined,
-      status: (searchParams.get("status") as "all" | "lead" | "customer" | "inactive") || "all",
+      status:
+        statusParam && isCrmContactStatus(statusParam) ? statusParam : "all",
       tag: searchParams.get("tag") ?? undefined,
       unread: searchParams.get("unread") === "1",
       view:

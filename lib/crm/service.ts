@@ -18,6 +18,7 @@ import {
   readCrmData,
   setContactBotEnabled,
   upsertContact,
+  patchContact,
 } from "./store";
 import { crmPhoneDigits, crmPhoneE164, displayNameFromContact } from "./phone";
 import {
@@ -35,9 +36,15 @@ import type {
   CrmContactDetail,
   CrmContactListItem,
   CrmContactSortField,
+  CrmContactStatus,
   CrmConversationView,
   CrmInteraction,
 } from "./types";
+import {
+  emptyPipelineCounts,
+  isCrmContactStatus,
+  normalizeCrmContactStatus,
+} from "./pipeline";
 
 const FOLLOW_UP_DAYS = 14;
 const DAY_MS = 24 * 60 * 60 * 1000;
@@ -52,7 +59,7 @@ type LinkedAppointment = {
 
 export type CrmListFilter = {
   q?: string;
-  status?: "all" | "lead" | "customer" | "inactive";
+  status?: "all" | CrmContactStatus;
   tag?: string;
   unread?: boolean;
   view?: CrmConversationView;
@@ -237,10 +244,8 @@ export async function listCrmContacts(filter: CrmListFilter = {}): Promise<{
   contacts: CrmContactListItem[];
   stats: {
     total: number;
-    leads: number;
-    customers: number;
-    inactive: number;
     unread: number;
+    byStage: Record<CrmContactStatus, number>;
   };
   platform: Awaited<ReturnType<typeof twilioStatus>> & {
     smsBotEnabled: boolean;
@@ -255,7 +260,8 @@ export async function listCrmContacts(filter: CrmListFilter = {}): Promise<{
 
   let contacts = data.contacts.map((c) => enrichContactWithSortMeta(c, appointments));
   if (filter.status && filter.status !== "all") {
-    contacts = contacts.filter((c) => c.status === filter.status);
+    const stage = normalizeCrmContactStatus(filter.status);
+    contacts = contacts.filter((c) => c.status === stage);
   }
   if (filter.tag) {
     contacts = contacts.filter((c) => c.tags.includes(filter.tag!));
@@ -295,6 +301,10 @@ export async function listCrmContacts(filter: CrmListFilter = {}): Promise<{
   contacts = sortContacts(contacts, sortField, sortOrder);
 
   const all = data.contacts;
+  const byStage = emptyPipelineCounts();
+  for (const contact of all) {
+    byStage[normalizeCrmContactStatus(contact.status)] += 1;
+  }
   const [platform, botEnabled, botConfig] = await Promise.all([
     twilioStatus(),
     isSmsBotEnabled(),
@@ -304,10 +314,8 @@ export async function listCrmContacts(filter: CrmListFilter = {}): Promise<{
     contacts,
     stats: {
       total: all.length,
-      leads: all.filter((c) => c.status === "lead").length,
-      customers: all.filter((c) => c.status === "customer").length,
-      inactive: all.filter((c) => c.status === "inactive").length,
       unread: all.filter((c) => (c.unreadCount ?? 0) > 0).length,
+      byStage,
     },
     platform: {
       ...platform,
@@ -391,6 +399,76 @@ export async function updateContactBot(
   return setContactBotEnabled(contactId, botEnabled);
 }
 
+export async function updateContactProfile(
+  contactId: string,
+  input: {
+    firstName?: string;
+    lastName?: string;
+    email?: string;
+    phone?: string;
+    address?: string;
+    city?: string;
+    zipCode?: string;
+    status?: CrmContactStatus;
+    medicalService?: string;
+  }
+): Promise<CrmContact | null> {
+  const existing = await findContactById(contactId);
+  if (!existing) return null;
+
+  let phone = existing.phone;
+  let phoneE164 = existing.phoneE164;
+  if (typeof input.phone === "string" && input.phone.trim()) {
+    const digits = crmPhoneDigits(input.phone);
+    if (digits.length < 10) {
+      throw new Error("Enter a valid 10-digit US phone number");
+    }
+    const other = await findContactByPhone(digits);
+    if (other && other.id !== contactId) {
+      throw new Error("Another contact already uses that phone number");
+    }
+    phone = digits;
+    phoneE164 = crmPhoneE164(input.phone) ?? `+1${digits}`;
+  }
+
+  const firstName =
+    input.firstName !== undefined ? input.firstName.trim() || undefined : existing.firstName;
+  const lastName =
+    input.lastName !== undefined ? input.lastName.trim() || undefined : existing.lastName;
+  const email =
+    input.email !== undefined ? input.email.trim() || undefined : existing.email;
+  const address =
+    input.address !== undefined ? input.address.trim() || undefined : existing.address;
+  const city = input.city !== undefined ? input.city.trim() || undefined : existing.city;
+  const zipCode =
+    input.zipCode !== undefined ? input.zipCode.trim() || undefined : existing.zipCode;
+  const status = input.status
+    ? isCrmContactStatus(input.status)
+      ? input.status
+      : normalizeCrmContactStatus(input.status)
+    : existing.status;
+  const serviceId = resolveMedicalServiceId({
+    medicalService: input.medicalService || existing.medicalService,
+  });
+  const def = getMedicalService(serviceId);
+
+  return patchContact(contactId, {
+    phone,
+    phoneE164,
+    firstName,
+    lastName,
+    email,
+    address,
+    city,
+    zipCode,
+    status,
+    medicalService: serviceId,
+    service: def.label,
+    fullName: displayNameFromContact({ firstName, lastName, phone }),
+    tags: Array.from(new Set([...(existing.tags || []), def.crmTag])),
+  });
+}
+
 export async function createManualContact(input: {
   phone: string;
   firstName?: string;
@@ -427,7 +505,7 @@ export async function createManualContact(input: {
     appointmentIds: [],
     medicalService: serviceId,
     service: def.label,
-    status: "lead",
+    status: "contact",
     tags: ["manual", def.crmTag],
     source: "manual",
     unreadCount: 0,

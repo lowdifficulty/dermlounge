@@ -18,6 +18,7 @@ import {
 } from "@/lib/medical-services";
 import { crmPhoneDigits, crmPhoneE164, displayNameFromContact } from "./phone";
 import type { CrmContact, CrmInteraction, CrmPet } from "./types";
+import { pipelineStatusAfterAppointment } from "./pipeline";
 
 function mergePetsFromAppointment(existing: CrmPet[], appointment: Appointment): CrmPet[] {
   const next: CrmPet[] = [
@@ -58,7 +59,7 @@ export async function ensureContactFromAppointment(appointment: Appointment): Pr
       phoneE164: crmPhoneE164(appointment.phone) ?? `+1${digits}`,
       pets: [],
       appointmentIds: [],
-      status: "customer",
+      status: "appointment",
       tags: [],
       source: "appointment",
       unreadCount: 0,
@@ -91,7 +92,7 @@ export async function ensureContactFromAppointment(appointment: Appointment): Pr
     appointmentIds: contact.appointmentIds.includes(appointment.id)
       ? contact.appointmentIds
       : [...contact.appointmentIds, appointment.id],
-    status: contact.status === "inactive" ? contact.status : "customer",
+    status: pipelineStatusAfterAppointment(contact.status),
     source: contact.source === "import" ? "appointment" : contact.source,
     tags,
     updatedAt: now,

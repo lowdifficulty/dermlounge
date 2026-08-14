@@ -1,6 +1,12 @@
 import type { MedicalServiceId } from "@/lib/medical-services";
 
-export type CrmContactStatus = "lead" | "customer" | "inactive";
+export type CrmContactStatus =
+  | "lead"
+  | "contact"
+  | "appointment"
+  | "patient"
+  | "follow_up"
+  | "cold";
 
 export type CrmContactSource =
   | "booking"

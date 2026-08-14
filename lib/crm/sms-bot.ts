@@ -254,19 +254,3 @@ export async function simulateSmsBotReply(options: {
     draftOnly: config.mode === "test",
   };
 }
-
-export function buildLeadFollowUpSms(contact: CrmContact): string {
-  const first = contact.firstName?.trim() || "there";
-  const serviceId = resolveMedicalServiceId(contact);
-  const def = getMedicalService(serviceId);
-  const url = medicalServiceContactUrl(serviceId, companyLegal.siteUrl);
-  return `Hi ${first} — thanks for your interest in ${def.label} at My Derm Lounge. Schedule a consultation: ${url} Reply STOP to opt out.`;
-}
-
-export function buildAppointmentFollowUpSms(contact: CrmContact): string {
-  const first = contact.firstName?.trim() || "there";
-  const serviceId = resolveMedicalServiceId(contact);
-  const def = getMedicalService(serviceId);
-  const url = medicalServiceContactUrl(serviceId, companyLegal.siteUrl);
-  return `Hi ${first}! Thank you for visiting My Derm Lounge for ${def.label}. Questions or ready for follow-up care? ${url} Reply STOP to opt out.`;
-}

@@ -7,6 +7,19 @@ import { assertWritablePersistence, isVercelServerless } from "@/lib/scheduling/
 import type { CrmContact, CrmData, CrmInteraction, SmsBotSession } from "./types";
 import { crmPhoneDigits } from "./phone";
 import { isConversationVisibleInteraction } from "./conversation-filter";
+import { normalizeCrmContactStatus } from "./pipeline";
+
+function normalizeCrmRecord(data: CrmData): CrmData {
+  return {
+    contacts: (data.contacts ?? []).map((contact) => ({
+      ...contact,
+      status: normalizeCrmContactStatus(contact.status),
+    })),
+    interactions: data.interactions ?? [],
+    seededAt: data.seededAt,
+    version: data.version ?? CRM_DATA_VERSION,
+  };
+}
 
 const FILE_PATH = path.join(process.cwd(), "data", "crm.json");
 const REDIS_KEY = "dl:crm";
@@ -27,12 +40,12 @@ async function readFromLocalFile(): Promise<CrmData> {
   try {
     const raw = await fs.readFile(FILE_PATH, "utf8");
     const parsed = JSON.parse(raw) as CrmData;
-    return {
+    return normalizeCrmRecord({
       contacts: parsed.contacts ?? [],
       interactions: parsed.interactions ?? [],
       seededAt: parsed.seededAt,
       version: parsed.version ?? CRM_DATA_VERSION,
-    };
+    });
   } catch {
     return emptyCrmData();
   }
@@ -45,24 +58,24 @@ async function writeToLocalFile(data: CrmData): Promise<void> {
 
 export async function readCrmData(): Promise<CrmData> {
   if (readCache && Date.now() - readCache.at < READ_CACHE_MS) {
-    return {
+    return normalizeCrmRecord({
       contacts: readCache.data.contacts ?? [],
       interactions: readCache.data.interactions ?? [],
       seededAt: readCache.data.seededAt,
       version: readCache.data.version ?? CRM_DATA_VERSION,
-    };
+    });
   }
 
   const redis = getRedisClient();
   if (redis) {
     const data = await redis.get<CrmData>(REDIS_KEY);
     if (data) {
-      const normalized: CrmData = {
+      const normalized = normalizeCrmRecord({
         contacts: data.contacts ?? [],
         interactions: data.interactions ?? [],
         seededAt: data.seededAt,
         version: data.version ?? CRM_DATA_VERSION,
-      };
+      });
       readCache = { data: normalized, at: Date.now() };
       return normalized;
     }
@@ -80,12 +93,12 @@ export async function readCrmData(): Promise<CrmData> {
 
 export async function writeCrmData(data: CrmData): Promise<void> {
   assertWritablePersistence();
-  const normalized: CrmData = {
+  const normalized = normalizeCrmRecord({
     contacts: data.contacts ?? [],
     interactions: data.interactions ?? [],
     seededAt: data.seededAt,
     version: data.version ?? CRM_DATA_VERSION,
-  };
+  });
   const redis = getRedisClient();
   if (redis) {
     await redis.set(REDIS_KEY, normalized);
@@ -178,12 +191,21 @@ export async function setContactBotEnabled(
   contactId: string,
   botEnabled: boolean
 ): Promise<CrmContact | null> {
+  return patchContact(contactId, { botEnabled });
+}
+
+export async function patchContact(
+  contactId: string,
+  patch: Partial<CrmContact>
+): Promise<CrmContact | null> {
   const data = await readCrmData();
   const idx = data.contacts.findIndex((c) => c.id === contactId);
   if (idx < 0) return null;
+  const { id: _id, ...rest } = patch;
   data.contacts[idx] = {
     ...data.contacts[idx],
-    botEnabled,
+    ...rest,
+    id: data.contacts[idx].id,
     updatedAt: new Date().toISOString(),
   };
   await writeCrmData(data);

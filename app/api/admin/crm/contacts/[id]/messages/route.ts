@@ -2,10 +2,6 @@ import { NextResponse } from "next/server";
 import { requireStaff } from "@/lib/scheduling/auth";
 import { findContactById } from "@/lib/crm/store";
 import { sendStaffSms } from "@/lib/crm/messaging";
-import {
-  buildAppointmentFollowUpSms,
-  buildLeadFollowUpSms,
-} from "@/lib/crm/sms-bot";
 
 type Params = { params: Promise<{ id: string }> };
 
@@ -18,17 +14,8 @@ export async function POST(request: Request, { params }: Params) {
       return NextResponse.json({ error: "Not found" }, { status: 404 });
     }
 
-    const body = (await request.json()) as {
-      body?: string;
-      template?: "lead_follow_up" | "appointment_follow_up";
-    };
-
-    let text = body.body?.trim() || "";
-    if (!text && body.template === "lead_follow_up") {
-      text = buildLeadFollowUpSms(contact);
-    } else if (!text && body.template === "appointment_follow_up") {
-      text = buildAppointmentFollowUpSms(contact);
-    }
+    const body = (await request.json()) as { body?: string };
+    const text = body.body?.trim() || "";
 
     if (!text) {
       return NextResponse.json({ error: "Message body is required" }, { status: 400 });

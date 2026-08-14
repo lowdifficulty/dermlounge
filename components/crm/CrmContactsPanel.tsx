@@ -2,18 +2,20 @@
 
 import { useCallback, useEffect, useState } from "react";
 import { formatPhoneDisplay } from "@/lib/leads/normalize";
-import type { CrmContactListItem, CrmContactSortField } from "@/lib/crm/types";
-import { getMedicalService, medicalServiceTabLabel } from "@/lib/medical-services";
+import { getMedicalService, medicalServiceTabLabel, MEDICAL_SERVICES } from "@/lib/medical-services";
+import type { CrmContactListItem, CrmContactSortField, CrmContactStatus } from "@/lib/crm/types";
+import {
+  CRM_PIPELINE_STAGE_OPTIONS,
+  crmContactStatusLabel,
+} from "@/lib/crm/pipeline";
 import CreateContactForm from "@/components/crm/CreateContactForm";
 
 type CrmContact = CrmContactListItem;
 
 type Stats = {
   total: number;
-  leads: number;
-  customers: number;
-  inactive: number;
   unread: number;
+  byStage?: Record<CrmContactStatus, number>;
 };
 
 type Column = {
@@ -87,13 +89,14 @@ export default function CrmContactsPanel({
   const [contacts, setContacts] = useState<CrmContact[]>([]);
   const [stats, setStats] = useState<Stats | null>(null);
   const [q, setQ] = useState("");
-  const [status, setStatus] = useState<"all" | "lead" | "customer" | "inactive">("all");
+  const [status, setStatus] = useState<"all" | CrmContactStatus>("all");
   const [sort, setSort] = useState<CrmContactSortField>("lastInteraction");
   const [sortOrder, setSortOrder] = useState<"asc" | "desc">("desc");
   const [loading, setLoading] = useState(true);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [banner, setBanner] = useState<string | null>(null);
+  const [editing, setEditing] = useState<CrmContact | null>(null);
 
   const loadContacts = useCallback(async () => {
     setLoading(true);
@@ -169,7 +172,7 @@ export default function CrmContactsPanel({
       case "areaCode":
         return c.areaCode || "—";
       case "status":
-        return c.status;
+        return crmContactStatusLabel(c.status);
       case "booked":
         return c.hasBookedAppointment ? "Yes" : "No";
       case "lastAppointment":
@@ -196,8 +199,7 @@ export default function CrmContactsPanel({
         </div>
         {stats && (
           <p className="text-xs text-gray-500">
-            {stats.total} total · {stats.customers} customers · {stats.leads} leads · {stats.unread}{" "}
-            unread
+            {stats.total} total · {stats.unread} unread
           </p>
         )}
       </div>
@@ -229,10 +231,12 @@ export default function CrmContactsPanel({
           onChange={(e) => setStatus(e.target.value as typeof status)}
           className="border border-gray-200 rounded-xl px-3 py-2 text-sm"
         >
-          <option value="all">All statuses</option>
-          <option value="customer">Customers</option>
-          <option value="lead">Leads</option>
-          <option value="inactive">Inactive</option>
+          <option value="all">All stages</option>
+          {CRM_PIPELINE_STAGE_OPTIONS.map((option) => (
+            <option key={option.id} value={option.id}>
+              {option.label}
+            </option>
+          ))}
         </select>
         <button
           type="button"
@@ -277,7 +281,7 @@ export default function CrmContactsPanel({
                   )}
                 </div>
                 <div className="flex flex-wrap gap-x-3 gap-y-1 text-xs text-gray-500">
-                  <span>{c.status}</span>
+                  <span>{crmContactStatusLabel(c.status)}</span>
                   {c.parsedCity || c.city ? <span>{c.parsedCity || c.city}</span> : null}
                   {petsLabel(c) !== "—" ? <span>{petsLabel(c)}</span> : null}
                   <span>{medicalServiceTabLabel(getMedicalService(c.primaryMedicalService))}</span>
@@ -291,6 +295,13 @@ export default function CrmContactsPanel({
                     Message
                   </button>
                 )}
+                <button
+                  type="button"
+                  onClick={() => setEditing(c)}
+                  className="text-sm font-semibold text-gray-600 hover:underline ml-3"
+                >
+                  Edit
+                </button>
               </div>
             ))}
         </div>
@@ -311,24 +322,22 @@ export default function CrmContactsPanel({
                     </button>
                   </th>
                 ))}
-                {onOpenConversation && (
-                  <th className="px-3 py-2 font-semibold text-gray-600 min-w-[88px] sticky right-0 bg-gray-50">
-                    Action
-                  </th>
-                )}
+                <th className="px-3 py-2 font-semibold text-gray-600 min-w-[120px] sticky right-0 bg-gray-50">
+                  Action
+                </th>
               </tr>
             </thead>
             <tbody>
               {loading && (
                 <tr>
-                  <td colSpan={COLUMNS.length + (onOpenConversation ? 1 : 0)} className="px-4 py-8 text-gray-500">
+                  <td colSpan={COLUMNS.length + 1} className="px-4 py-8 text-gray-500">
                     Loading contacts…
                   </td>
                 </tr>
               )}
               {!loading && contacts.length === 0 && (
                 <tr>
-                  <td colSpan={COLUMNS.length + (onOpenConversation ? 1 : 0)} className="px-4 py-8 text-gray-500">
+                  <td colSpan={COLUMNS.length + 1} className="px-4 py-8 text-gray-500">
                     No contacts match your filters.
                   </td>
                 </tr>
@@ -358,9 +367,27 @@ export default function CrmContactsPanel({
                         <button
                           type="button"
                           onClick={() => onOpenConversation(c.id)}
-                          className="text-xs font-semibold text-brand hover:underline"
+                          className="text-xs font-semibold text-brand hover:underline mr-3"
                         >
                           Message
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => setEditing(c)}
+                          className="text-xs font-semibold text-gray-600 hover:underline"
+                        >
+                          Edit
+                        </button>
+                      </td>
+                    )}
+                    {!onOpenConversation && (
+                      <td className="px-3 py-2 sticky right-0 bg-inherit">
+                        <button
+                          type="button"
+                          onClick={() => setEditing(c)}
+                          className="text-xs font-semibold text-gray-600 hover:underline"
+                        >
+                          Edit
                         </button>
                       </td>
                     )}
@@ -370,6 +397,181 @@ export default function CrmContactsPanel({
           </table>
         </div>
       </div>
+
+      {editing && (
+        <ContactEditor
+          contact={editing}
+          onClose={() => setEditing(null)}
+          onSaved={() => {
+            setEditing(null);
+            setBanner("Contact updated");
+            void loadContacts();
+          }}
+        />
+      )}
+    </div>
+  );
+}
+
+function ContactEditor({
+  contact,
+  onClose,
+  onSaved,
+}: {
+  contact: CrmContact;
+  onClose: () => void;
+  onSaved: () => void;
+}) {
+  const [firstName, setFirstName] = useState(contact.firstName || "");
+  const [lastName, setLastName] = useState(contact.lastName || "");
+  const [phone, setPhone] = useState(contact.phone);
+  const [email, setEmail] = useState(contact.email || "");
+  const [address, setAddress] = useState(contact.address || "");
+  const [city, setCity] = useState(contact.city || contact.parsedCity || "");
+  const [zipCode, setZipCode] = useState(contact.zipCode || contact.parsedZip || "");
+  const [status, setStatus] = useState<CrmContactStatus>(contact.status);
+  const [medicalService, setMedicalService] = useState(
+    contact.medicalService || contact.primaryMedicalService || "wound_care"
+  );
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  async function save(e: React.FormEvent) {
+    e.preventDefault();
+    setBusy(true);
+    setError(null);
+    try {
+      const res = await fetch(`/api/admin/crm/contacts/${contact.id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          firstName,
+          lastName,
+          phone,
+          email,
+          address,
+          city,
+          zipCode,
+          status,
+          medicalService,
+        }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || "Could not save contact");
+      onSaved();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Could not save contact");
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center">
+      <button
+        type="button"
+        aria-label="Close"
+        className="absolute inset-0 bg-black/40"
+        onClick={onClose}
+      />
+      <form
+        onSubmit={(e) => void save(e)}
+        className="relative bg-white w-full sm:max-w-lg rounded-t-2xl sm:rounded-2xl p-5 space-y-3 shadow-xl max-h-[90dvh] overflow-y-auto"
+      >
+        <div className="flex items-center justify-between">
+          <h3 className="font-bold text-brand">Edit contact</h3>
+          <button type="button" onClick={onClose} className="text-gray-500 text-xl leading-none">
+            ×
+          </button>
+        </div>
+        <div className="grid grid-cols-2 gap-2">
+          <input
+            value={firstName}
+            onChange={(e) => setFirstName(e.target.value)}
+            placeholder="First name"
+            className="border border-gray-200 rounded-lg px-3 py-2 text-sm"
+          />
+          <input
+            value={lastName}
+            onChange={(e) => setLastName(e.target.value)}
+            placeholder="Last name"
+            className="border border-gray-200 rounded-lg px-3 py-2 text-sm"
+          />
+        </div>
+        <input
+          value={phone}
+          onChange={(e) => setPhone(e.target.value)}
+          required
+          placeholder="Phone"
+          className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm"
+        />
+        <input
+          value={email}
+          onChange={(e) => setEmail(e.target.value)}
+          type="email"
+          placeholder="Email"
+          className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm"
+        />
+        <input
+          value={address}
+          onChange={(e) => setAddress(e.target.value)}
+          placeholder="Street"
+          className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm"
+        />
+        <div className="grid grid-cols-2 gap-2">
+          <input
+            value={city}
+            onChange={(e) => setCity(e.target.value)}
+            placeholder="City"
+            className="border border-gray-200 rounded-lg px-3 py-2 text-sm"
+          />
+          <input
+            value={zipCode}
+            onChange={(e) => setZipCode(e.target.value)}
+            placeholder="Zip"
+            className="border border-gray-200 rounded-lg px-3 py-2 text-sm"
+          />
+        </div>
+        <select
+          value={status}
+          onChange={(e) => setStatus(e.target.value as CrmContactStatus)}
+          className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm"
+        >
+          {CRM_PIPELINE_STAGE_OPTIONS.map((option) => (
+            <option key={option.id} value={option.id}>
+              {option.label}
+            </option>
+          ))}
+        </select>
+        <select
+          value={medicalService}
+          onChange={(e) => setMedicalService(e.target.value)}
+          className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm"
+        >
+          {MEDICAL_SERVICES.map((service) => (
+            <option key={service.id} value={service.id}>
+              {service.label}
+            </option>
+          ))}
+        </select>
+        {error && <p className="text-sm text-red-700">{error}</p>}
+        <div className="flex gap-2 justify-end">
+          <button
+            type="button"
+            onClick={onClose}
+            className="px-4 py-2 rounded-lg text-sm font-semibold border border-gray-200"
+          >
+            Cancel
+          </button>
+          <button
+            type="submit"
+            disabled={busy}
+            className="px-4 py-2 rounded-lg text-sm font-semibold bg-brand text-white disabled:opacity-50"
+          >
+            {busy ? "Saving…" : "Save"}
+          </button>
+        </div>
+      </form>
     </div>
   );
 }

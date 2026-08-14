@@ -2,7 +2,8 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { formatPhoneDisplay } from "@/lib/leads/normalize";
-import type { CrmConversationView } from "@/lib/crm/types";
+import type { CrmConversationView, CrmContactStatus } from "@/lib/crm/types";
+import { crmContactStatusLabel } from "@/lib/crm/pipeline";
 import { useMediaQuery } from "@/lib/hooks/use-media-query";
 import {
   crmConversationTabs,
@@ -44,7 +45,7 @@ type CrmContact = {
   pets: { petName: string; petSize?: string; petBreed?: string }[];
   service?: string;
   smsOptIn?: boolean;
-  status: "lead" | "customer" | "inactive";
+  status: CrmContactStatus;
   tags: string[];
   source: string;
   unreadCount: number;
@@ -345,7 +346,7 @@ export default function CrmPanel() {
     }
   }
 
-  async function sendSms(template?: "lead_follow_up" | "appointment_follow_up") {
+  async function sendSms() {
     if (!selectedId) return;
     setBusy("sms");
     setError(null);
@@ -354,7 +355,7 @@ export default function CrmPanel() {
       const res = await fetch(`/api/admin/crm/contacts/${selectedId}/messages`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(template ? { template } : { body: message }),
+        body: JSON.stringify({ body: message }),
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || "SMS failed");
@@ -534,7 +535,7 @@ export default function CrmPanel() {
                     </div>
                     <div className="flex items-center gap-2 mt-1">
                       <span className="text-[10px] uppercase font-bold text-gray-400">
-                        {c.status}
+                        {crmContactStatusLabel(c.status)}
                       </span>
                       {c.unreadCount > 0 && (
                         <span className="text-[10px] font-bold bg-accent text-white rounded-full px-1.5">
@@ -704,22 +705,6 @@ export default function CrmPanel() {
                       className="px-4 py-2 rounded-lg text-sm font-semibold bg-brand text-white disabled:opacity-50"
                     >
                       Send
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => void sendSms("lead_follow_up")}
-                      disabled={busy === "sms"}
-                      className="px-3 py-2 rounded-lg text-xs font-semibold border border-gray-200"
-                    >
-                      Lead follow-up
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => void sendSms("appointment_follow_up")}
-                      disabled={busy === "sms"}
-                      className="px-3 py-2 rounded-lg text-xs font-semibold border border-gray-200"
-                    >
-                      Rebook
                     </button>
                   </div>
                   <input

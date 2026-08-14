@@ -50,11 +50,9 @@ function leadSource(lead: Lead): CrmContactSource {
 }
 
 function statusFromLead(lead: Lead, hasUpcoming: boolean, hasPast: boolean): CrmContactStatus {
-  if (lead.listStatus === "cold_storage") return "inactive";
-  if (hasUpcoming || lead.funnelStep === "scheduled" || lead.funnelStep === "appointment_completed") {
-    return "customer";
-  }
-  if (hasPast) return "customer";
+  if (lead.listStatus === "cold_storage") return "cold";
+  if (hasUpcoming || lead.funnelStep === "scheduled") return "appointment";
+  if (hasPast || lead.funnelStep === "appointment_completed") return "patient";
   return "lead";
 }
 
@@ -340,7 +338,7 @@ export function buildCrmFromSources(input: {
     if (primaryLead) {
       contact.status = statusFromLead(primaryLead, hasUpcoming, hasPast);
     } else if (hasUpcoming || hasPast || contact.clientAccountId) {
-      contact.status = "customer";
+      contact.status = "patient";
     }
 
     if (hasUpcoming && !contact.tags.includes("upcoming")) contact.tags.push("upcoming");
@@ -487,8 +485,15 @@ export async function refreshCrmContactsPreservingLiveInteractions(): Promise<Cr
     return true;
   });
 
+  const existingByPhone = new Map(existing.contacts.map((c) => [c.phone, c]));
+  const contacts = snapshot.contacts.map((contact) => {
+    const prev = existingByPhone.get(contact.phone);
+    if (!prev) return contact;
+    return { ...contact, status: prev.status };
+  });
+
   const data: CrmData = {
-    contacts: snapshot.contacts,
+    contacts,
     interactions: [...snapshotInteractions, ...remapped].sort((a, b) =>
       a.createdAt.localeCompare(b.createdAt)
     ),
