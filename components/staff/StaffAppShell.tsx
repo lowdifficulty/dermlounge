@@ -348,7 +348,7 @@ function StaffAppShellInner({
   );
 
   return (
-    <div className="min-h-screen bg-section-gray text-gray-900 flex">
+    <div className="h-[100dvh] max-h-[100dvh] overflow-hidden bg-section-gray text-gray-900 flex">
       {mobileNavOpen && (
         <button
           type="button"
@@ -366,8 +366,8 @@ function StaffAppShellInner({
         {sidebar}
       </aside>
 
-      <div className="flex-1 min-w-0 flex flex-col min-h-[100dvh] w-full lg:pl-0">
-        <header className="sticky top-0 z-20 bg-white/95 backdrop-blur border-b border-gray-200 px-3 sm:px-4 md:px-6 h-14 flex items-center justify-between gap-3">
+      <div className="flex-1 min-w-0 min-h-0 flex flex-col h-full w-full overflow-hidden lg:pl-0">
+        <header className="sticky top-0 z-20 shrink-0 bg-white/95 backdrop-blur border-b border-gray-200 px-3 sm:px-4 md:px-6 h-12 lg:h-14 flex items-center justify-between gap-2 sm:gap-3">
           <div className="flex items-center gap-2 min-w-0">
             <button
               type="button"
@@ -380,17 +380,17 @@ function StaffAppShellInner({
               </svg>
             </button>
             <div className="min-w-0">
-              <p className="text-[11px] uppercase tracking-wide text-gray-400 font-semibold truncate">
+              <p className="hidden sm:block text-[11px] uppercase tracking-wide text-gray-400 font-semibold truncate">
                 {eyebrow}
               </p>
-              <h1 className="text-base font-bold text-brand leading-tight truncate">{activeLabel}</h1>
+              <h1 className="text-sm lg:text-base font-bold text-brand leading-tight truncate">{activeLabel}</h1>
             </div>
           </div>
           {showDialer && (
             <button
               type="button"
               onClick={() => (dialerOpen ? closeDialer() : openDialer())}
-              className={`inline-flex items-center gap-2 px-3 py-1.5 rounded-lg text-sm font-semibold transition-colors shrink-0 ${
+              className={`inline-flex items-center gap-2 px-2.5 py-1.5 lg:px-3 rounded-lg text-sm font-semibold transition-colors shrink-0 ${
                 dialerOpen
                   ? "bg-accent text-white"
                   : "bg-accent-light text-accent-hot hover:bg-accent/10 border border-accent/20"
@@ -403,7 +403,7 @@ function StaffAppShellInner({
             </button>
           )}
         </header>
-        <main className="flex-1 min-h-0">{children}</main>
+        <main className="flex-1 min-h-0 overflow-hidden flex flex-col">{children}</main>
         {showDialer && dialerOpen && (
           <StaffDialerPopup prefillPhone={prefillPhone} onClose={closeDialer} />
         )}

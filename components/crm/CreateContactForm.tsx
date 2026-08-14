@@ -71,7 +71,7 @@ export default function CreateContactForm({
         onClick={() => setOpen(true)}
         className={
           compact
-            ? "w-full px-3 py-2 rounded-lg text-sm font-semibold bg-brand text-white"
+            ? "w-full px-3 py-1.5 sm:py-2 rounded-lg text-sm font-semibold bg-brand text-white"
             : "px-4 py-2 rounded-xl text-sm font-semibold bg-brand text-white"
         }
       >

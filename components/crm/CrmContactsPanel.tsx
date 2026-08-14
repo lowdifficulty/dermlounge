@@ -219,12 +219,24 @@ export default function CrmContactsPanel({
         </div>
       )}
 
-      <div className="flex flex-wrap gap-2 items-center">
+      <div className="flex flex-col sm:flex-row flex-wrap gap-2 items-stretch sm:items-center">
+        <CreateContactForm
+          compact
+          onCreated={(contact, created) => {
+            setBanner(
+              created
+                ? "Contact created — send a text from the conversation"
+                : "Contact already exists — send a text from the conversation"
+            );
+            void loadContacts();
+            onOpenConversation?.(contact.id);
+          }}
+        />
         <input
           value={q}
           onChange={(e) => setQ(e.target.value)}
           placeholder="Search name, phone, email, city, zip…"
-          className="border border-gray-200 rounded-xl px-3 py-2 text-sm min-w-[220px] flex-1 max-w-md"
+          className="border border-gray-200 rounded-xl px-3 py-2 text-sm min-w-0 sm:min-w-[220px] flex-1 max-w-md"
         />
         <select
           value={status}
@@ -246,17 +258,6 @@ export default function CrmContactsPanel({
         >
           {busy ? "Syncing…" : "Sync from bookings"}
         </button>
-        <CreateContactForm
-          onCreated={(contact, created) => {
-            setBanner(
-              created
-                ? "Contact created — send a text from the conversation"
-                : "Contact already exists — send a text from the conversation"
-            );
-            void loadContacts();
-            onOpenConversation?.(contact.id);
-          }}
-        />
       </div>
 
       <div className="bg-white border border-gray-200 rounded-xl overflow-hidden">

@@ -135,7 +135,9 @@ function serviceLabelForContact(c: CrmContact): string {
 }
 
 function paneClass(show: boolean) {
-  return show ? "flex flex-col min-h-0 min-w-0" : "hidden lg:flex lg:flex-col lg:min-h-0 lg:min-w-0";
+  return show
+    ? "flex flex-col min-h-0 min-w-0 overflow-hidden"
+    : "hidden lg:flex lg:flex-col lg:min-h-0 lg:min-w-0 lg:overflow-hidden";
 }
 
 export default function CrmPanel() {
@@ -418,11 +420,11 @@ export default function CrmPanel() {
   const showThreadPane = isLargeScreen || mobileThreadOpen;
 
   return (
-    <div className="h-[calc(100dvh-3.5rem)] flex flex-col min-h-0">
+    <div className="h-full min-h-0 flex flex-col overflow-hidden">
       {(banner || error || platform?.crmStorage === "file") && (
-        <div className="px-4 py-2 border-b border-gray-200 bg-white flex flex-wrap gap-3 items-center text-xs">
+        <div className="px-3 py-1.5 sm:px-4 sm:py-2 border-b border-gray-200 bg-white flex flex-wrap gap-2 sm:gap-3 items-center text-[11px] sm:text-xs shrink-0">
           {platform?.crmStorage === "file" && (
-            <span className="text-amber-800 bg-amber-50 border border-amber-200 rounded-lg px-2 py-1">
+            <span className="text-amber-800 bg-amber-50 border border-amber-200 rounded-lg px-2 py-1 line-clamp-2 sm:line-clamp-none">
               Inbound texts are stored on production only. Paste KV credentials into{" "}
               <code className="text-[11px]">.env.local</code> from the Vercel dashboard (env pull
               omits secrets), restart localhost, or use{" "}
@@ -440,7 +442,7 @@ export default function CrmPanel() {
       <div className="flex-1 min-h-0 grid grid-cols-1 lg:grid-cols-[300px_minmax(0,1fr)_300px] overflow-hidden">
         {/* Conversations list */}
         <section className={`${paneClass(showListPane)} border-r border-gray-200 bg-white`}>
-          <div className="p-3 border-b border-gray-100 space-y-2">
+          <div className="shrink-0 sticky top-0 z-10 bg-white p-2 sm:p-3 border-b border-gray-100 space-y-1.5 sm:space-y-2">
             <CreateContactForm
               compact
               onCreated={(contact, created) => void handleContactCreated(contact, created)}
@@ -450,25 +452,25 @@ export default function CrmPanel() {
                 value={q}
                 onChange={(e) => setQ(e.target.value)}
                 placeholder="Search conversations…"
-                className="min-w-0 flex-1 rounded-lg border border-gray-200 bg-[#f8fafc] px-3 py-2 text-sm"
+                className="min-w-0 flex-1 rounded-lg border border-gray-200 bg-[#f8fafc] px-3 py-1.5 sm:py-2 text-sm"
               />
               <button
                 type="button"
                 onClick={() => void refreshFromSources()}
                 disabled={busy === "refresh"}
                 title="Sync customers from bookings"
-                className="shrink-0 text-xs font-semibold text-brand px-1.5 py-2 hover:underline disabled:opacity-50"
+                className="shrink-0 text-xs font-semibold text-brand px-1.5 py-1.5 sm:py-2 hover:underline disabled:opacity-50"
               >
                 {busy === "refresh" ? "Syncing…" : "Sync"}
               </button>
             </div>
-            <div className="flex flex-wrap gap-1">
+            <div className="flex gap-1 overflow-x-auto flex-nowrap [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden">
               {VIEW_TABS.map((tab) => (
                 <button
                   key={tab.id}
                   type="button"
                   onClick={() => setView(tab.id)}
-                  className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-[11px] font-semibold ${
+                  className={`inline-flex shrink-0 items-center gap-1.5 px-2.5 py-1 rounded-md text-[11px] font-semibold whitespace-nowrap ${
                     view === tab.id
                       ? tab.id === "all"
                         ? "bg-accent text-white"
@@ -485,7 +487,7 @@ export default function CrmPanel() {
               <button
                 type="button"
                 onClick={() => setUnreadOnly((v) => !v)}
-                className={`px-2.5 py-1 rounded-md text-[11px] font-semibold ${
+                className={`shrink-0 px-2.5 py-1 rounded-md text-[11px] font-semibold whitespace-nowrap ${
                   unreadOnly ? "bg-accent text-white" : "bg-gray-100 text-gray-600"
                 }`}
               >
@@ -493,7 +495,7 @@ export default function CrmPanel() {
               </button>
             </div>
           </div>
-          <div className="flex-1 overflow-y-auto">
+          <div className="flex-1 min-h-0 overflow-y-auto">
             {listReady && contacts.length === 0 && (
               <div className="p-4 text-sm text-gray-500">No conversations</div>
             )}
@@ -507,7 +509,7 @@ export default function CrmPanel() {
                   key={c.id}
                   type="button"
                   onClick={() => openConversation(c.id)}
-                  className={`w-full text-left px-3 py-3 border-b border-gray-50 flex gap-3 ${medicalServiceConversationRowClass(
+                  className={`w-full text-left px-3 py-2.5 sm:py-3 border-b border-gray-50 flex gap-3 ${medicalServiceConversationRowClass(
                     serviceId,
                     active
                   )}`}

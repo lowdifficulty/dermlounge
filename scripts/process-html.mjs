@@ -341,14 +341,17 @@ function updateFooterCopyright(html) {
 /** @param {string} html */
 function injectStaffLoginLink(html) {
   if (!html.includes("bde-icon-list-42-119")) return html;
-  if (html.includes('href="/admin/login/"') || html.includes('href="/admin/login"')) {
-    return html;
-  }
 
-  return html.replace(
-    /(<div class="bde-icon-list-42-119 bde-icon-list">[\s\S]*?<span class='bde-icon-list__text' >\s*Terms & Conditions\s*<\/span>[\s\S]*?<\/li>)/,
-    `$1${STAFF_LOGIN_FOOTER_ITEM}`
-  );
+  const listRe = /(<div class="bde-icon-list-42-119 bde-icon-list">\s*<ul>)([\s\S]*?)(<\/ul>)/;
+  if (!listRe.test(html)) return html;
+
+  return html.replace(listRe, (_full, open, items, close) => {
+    const withoutLogin = items.replace(
+      /\s*<li>(?:(?!<\/li>)[\s\S])*href="\/admin\/login\/?"[\s\S]*?<\/li>/,
+      ""
+    );
+    return `${open}${STAFF_LOGIN_FOOTER_ITEM}${withoutLogin}${close}`;
+  });
 }
 
 /** @param {string} html */

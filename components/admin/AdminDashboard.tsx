@@ -48,7 +48,7 @@ export default function AdminDashboard() {
       onSelect={(id) => setTab(id as Tab)}
       onLogout={logout}
     >
-      <div className={padded ? "p-4 md:p-6" : ""}>
+      <div className={padded ? "p-4 md:p-6" : "h-full min-h-0 overflow-hidden"}>
         {tab === "crm" && <CrmPanel />}
         {tab === "contacts" && (
           <CrmContactsPanel onOpenConversation={openCrmConversation} />
