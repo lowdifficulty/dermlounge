@@ -14,6 +14,7 @@ import {
 import { syncExistingMetaLeads } from "@/lib/meta/leads";
 import { readLeadgenSubscription, subscribePageToLeadgen } from "@/lib/meta/subscribe";
 import { ensureLongLivedPageToken, inspectMetaAccessToken } from "@/lib/meta/token";
+import { clearMetaInsightsCache } from "@/lib/meta/insights";
 
 async function metaStatusPayload() {
   const config = await readMetaRuntimeConfig();
@@ -103,6 +104,9 @@ export async function PATCH(request: Request) {
     }
 
     await writeMetaRuntimeConfig(patch);
+    if (incomingToken || patch.appSecret || patch.adAccountId) {
+      await clearMetaInsightsCache();
+    }
 
     let subscription = null;
     let sync = null;

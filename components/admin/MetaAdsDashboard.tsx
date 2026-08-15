@@ -50,7 +50,11 @@ function MetricCard({
       <div className="text-[11px] font-semibold uppercase tracking-[0.16em] text-gray-500">
         {label}
       </div>
-      <div className={`mt-2 font-serif tabular-nums ${featured ? "text-4xl md:text-5xl text-brand" : "text-2xl text-brand"}`}>
+      <div
+        className={`mt-2 font-sans font-semibold tabular-nums ${
+          featured ? "text-4xl md:text-5xl text-brand" : "text-2xl text-brand"
+        }`}
+      >
         {value}
       </div>
       <p className="mt-2 text-sm text-gray-500">{hint}</p>
@@ -86,8 +90,10 @@ function TopAdVisual({ payload }: { payload: MetaInsightsPayload }) {
       <div className="relative overflow-hidden rounded-2xl bg-brand min-h-[280px] max-h-[420px]">
           {showImage ? (
             <img
-              src={`/api/admin/meta/creative?adId=${encodeURIComponent(ad.id)}`}
+              src={`/api/admin/meta/creative?adId=${encodeURIComponent(ad.id)}&v=2`}
               alt={ad.name}
+              width={1080}
+              height={1080}
               className="h-full w-full object-cover"
               onError={() => setBroken(true)}
             />

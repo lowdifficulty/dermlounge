@@ -63,6 +63,7 @@ type CreativeBody = {
   name?: string;
   thumbnail_url?: string;
   image_url?: string;
+  image_hash?: string;
   video_id?: string;
   object_story_spec?: {
     link_data?: { picture?: string; image_hash?: string };
@@ -74,6 +75,11 @@ type CreativeBody = {
     videos?: { thumbnail_url?: string; url?: string }[];
   };
 };
+
+const CREATIVE_IMAGE_FIELDS =
+  "id,name,image_url,image_hash,thumbnail_url,video_id,object_story_spec,asset_feed_spec";
+const CREATIVE_THUMB_PX = "1080";
+const CREATIVE_CACHE_PREFIX = "dl:meta-creative:v2:";
 
 type CachedCreative = {
   adId: string;
@@ -241,6 +247,22 @@ async function writeCache(
   }
 }
 
+export async function clearMetaInsightsCache(): Promise<void> {
+  memoryInsights.clear();
+  memoryCreative.clear();
+  const redis = getRedisClient();
+  if (!redis) return;
+  try {
+    const adAccountId = await resolveMetaAdAccountId();
+    await Promise.all([
+      redis.del(cacheKey(adAccountId, 7)),
+      redis.del(cacheKey(adAccountId, 30)),
+    ]);
+  } catch {
+    /* ignore */
+  }
+}
+
 function rankTopAd(ads: InsightRow[]): InsightRow | null {
   if (!ads.length) return null;
   return [...ads].sort((a, b) => {
@@ -298,17 +320,96 @@ function creativeKindFrom(creative: CreativeBody, url: string | null): "image" |
   return "unknown";
 }
 
+function looksLikeTinyThumb(url: string): boolean {
+  return (
+    /(?:^|[/_])(?:p|s)(?:64|74|75|100|130|150|160)x(?:64|74|75|100|130|150|160)(?:[/_]|$)/i.test(
+      url
+    ) || /[?&](?:w|width|h|height)=(64|74|75|100|130|150|160)\b/i.test(url)
+  );
+}
+
+function collectImageHashes(creative: CreativeBody): string[] {
+  return [
+    creative.image_hash,
+    creative.object_story_spec?.link_data?.image_hash,
+    creative.object_story_spec?.photo_data?.image_hash,
+    creative.asset_feed_spec?.images?.[0]?.hash,
+  ].filter((hash): hash is string => Boolean(hash?.trim()));
+}
+
+function collectVideoIds(creative: CreativeBody): string[] {
+  return [creative.video_id, creative.object_story_spec?.video_data?.video_id].filter(
+    (id): id is string => Boolean(id?.trim())
+  );
+}
+
+/** Prefer original/full assets. Default Graph thumbnail_url is 64px — last resort only. */
 function pickCreativeUrl(creative: CreativeBody): string | null {
-  const url = firstHttpUrl(
-    creative.thumbnail_url,
+  const full = firstHttpUrl(
     creative.image_url,
+    creative.object_story_spec?.photo_data?.url,
     creative.object_story_spec?.link_data?.picture,
     creative.object_story_spec?.video_data?.image_url,
-    creative.object_story_spec?.photo_data?.url,
     creative.asset_feed_spec?.images?.[0]?.url,
-    creative.asset_feed_spec?.videos?.[0]?.thumbnail_url
+    creative.asset_feed_spec?.videos?.[0]?.url
   );
-  return url ? stripTokenFromUrl(url) : null;
+  if (full && !looksLikeTinyThumb(full)) return stripTokenFromUrl(full);
+
+  const largeThumb = firstHttpUrl(
+    creative.thumbnail_url,
+    creative.asset_feed_spec?.videos?.[0]?.thumbnail_url,
+    full || undefined
+  );
+  return largeThumb ? stripTokenFromUrl(largeThumb) : null;
+}
+
+async function fetchCreativeBody(creativeId: string, token: string): Promise<CreativeBody> {
+  return graphGet<CreativeBody>(creativeId, token, {
+    fields: CREATIVE_IMAGE_FIELDS,
+    thumbnail_width: CREATIVE_THUMB_PX,
+    thumbnail_height: CREATIVE_THUMB_PX,
+  });
+}
+
+async function lookupAdImageUrl(
+  adAccountId: string,
+  token: string,
+  imageHash: string
+): Promise<string | null> {
+  try {
+    const images = await graphGet<
+      GraphList<{ url?: string; permalink_url?: string; width?: number; height?: number }>
+    >(`${metaAdAccountPath(adAccountId)}/adimages`, token, {
+      hashes: JSON.stringify([imageHash]),
+      fields: "url,permalink_url,width,height",
+    });
+    const row = images.data?.[0];
+    const url = firstHttpUrl(row?.url, row?.permalink_url);
+    return url ? stripTokenFromUrl(url) : null;
+  } catch {
+    return null;
+  }
+}
+
+async function lookupVideoPicture(videoId: string, token: string): Promise<string | null> {
+  try {
+    const picture = await graphGet<{ data?: { url?: string }; url?: string }>(
+      `${videoId}/picture`,
+      token,
+      { redirect: "false", width: CREATIVE_THUMB_PX, height: CREATIVE_THUMB_PX }
+    );
+    const url = firstHttpUrl(picture.data?.url, picture.url);
+    if (url) return stripTokenFromUrl(url);
+  } catch {
+    /* try video.picture field */
+  }
+  try {
+    const video = await graphGet<{ picture?: string }>(videoId, token, { fields: "picture" });
+    const url = firstHttpUrl(video.picture);
+    return url ? stripTokenFromUrl(url) : null;
+  } catch {
+    return null;
+  }
 }
 
 async function fetchAdList(
@@ -348,39 +449,46 @@ async function lookupCreative(
     name?: string;
     creative?: CreativeBody & { id?: string };
   }>(adId, token, {
-    fields:
-      "id,name,creative{id,name,thumbnail_url,image_url,video_id,object_story_spec,asset_feed_spec}",
+    fields: `id,name,creative{${CREATIVE_IMAGE_FIELDS}}`,
   });
   let creative = ad.creative ?? {};
-  if (ad.creative?.id && !pickCreativeUrl(creative)) {
+  if (ad.creative?.id) {
     try {
-      creative = await graphGet<CreativeBody>(ad.creative.id, token, {
-        fields: "id,name,thumbnail_url,image_url,video_id,object_story_spec,asset_feed_spec",
-      });
+      creative = { ...creative, ...(await fetchCreativeBody(ad.creative.id, token)) };
     } catch {
-      /* keep nested creative */
+      /* keep nested creative — thumbnail_width only applies on the creative node */
     }
   }
 
-  let url = pickCreativeUrl(creative);
-  const imageHash =
-    creative.object_story_spec?.link_data?.image_hash ||
-    creative.object_story_spec?.photo_data?.image_hash ||
-    creative.asset_feed_spec?.images?.[0]?.hash;
-  if (!url && imageHash) {
-    try {
-      const images = await graphGet<GraphList<{ url?: string; permalink_url?: string }>>(
-        `${metaAdAccountPath(adAccountId)}/adimages`,
-        token,
-        { hashes: JSON.stringify([imageHash]), fields: "url,permalink_url" }
-      );
-      url = firstHttpUrl(images.data?.[0]?.url, images.data?.[0]?.permalink_url);
-      if (url) url = stripTokenFromUrl(url);
-    } catch {
-      /* no image hash lookup */
+  const picked = pickCreativeUrl(creative);
+  const thumbUrl = creative.thumbnail_url ? stripTokenFromUrl(creative.thumbnail_url) : null;
+  const pickedIsGeneratedThumb = Boolean(picked && thumbUrl && picked === thumbUrl);
+  let url: string | null =
+    picked && !looksLikeTinyThumb(picked) && !pickedIsGeneratedThumb ? picked : null;
+
+  if (!url) {
+    for (const hash of collectImageHashes(creative)) {
+      const hashUrl = await lookupAdImageUrl(adAccountId, token, hash);
+      if (hashUrl && !looksLikeTinyThumb(hashUrl)) {
+        url = hashUrl;
+        break;
+      }
+      if (!url && hashUrl) url = hashUrl;
     }
   }
 
+  if (!url || looksLikeTinyThumb(url)) {
+    for (const videoId of collectVideoIds(creative)) {
+      const videoUrl = await lookupVideoPicture(videoId, token);
+      if (videoUrl && !looksLikeTinyThumb(videoUrl)) {
+        url = videoUrl;
+        break;
+      }
+      if (!url && videoUrl) url = videoUrl;
+    }
+  }
+
+  if (!url) url = picked;
   if (!url) return null;
   return { adId, url, kind: creativeKindFrom(creative, url) };
 }
@@ -390,7 +498,7 @@ async function cachedCreativeFor(
   token: string,
   adAccountId: string
 ): Promise<CachedCreative | null> {
-  const key = `dl:meta-creative:v1:${adId}`;
+  const key = `${CREATIVE_CACHE_PREFIX}${adId}`;
   const mem = memoryCreative.get(key);
   if (mem && mem.expiresAt > Date.now()) return mem.value;
   try {
