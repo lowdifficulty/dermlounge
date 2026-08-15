@@ -4,6 +4,7 @@ import {
   maskSecret,
   metaWebhookUrl,
   readMetaRuntimeConfig,
+  resolveMetaAdAccountId,
   resolveMetaPageAccessToken,
   resolveMetaPageId,
   resolveMetaVerifyToken,
@@ -34,8 +35,10 @@ async function metaStatusPayload() {
     subscription,
     config: {
       pageId: pageId || "",
+      adAccountId: await resolveMetaAdAccountId(),
       pageAccessTokenMasked: maskSecret(token),
       hasPageAccessToken: Boolean(token),
+      hasUserAccessToken: Boolean(config.userAccessToken?.trim()),
       hasAppSecret: Boolean(
         process.env.META_APP_SECRET?.trim() || config.appSecret?.trim()
       ),
@@ -75,6 +78,7 @@ export async function PATCH(request: Request) {
       autoSmsEnabled: false,
     };
     if (typeof body.pageId === "string") patch.pageId = body.pageId;
+    if (typeof body.adAccountId === "string") patch.adAccountId = body.adAccountId;
     if (typeof body.verifyToken === "string") patch.verifyToken = body.verifyToken;
     if (typeof body.appId === "string" && body.appId.trim()) patch.appId = body.appId.trim();
     if (typeof body.appSecret === "string" && body.appSecret.trim()) {
@@ -93,6 +97,7 @@ export async function PATCH(request: Request) {
       }
       const upgraded = await ensureLongLivedPageToken(pageId, incomingToken);
       patch.pageAccessToken = upgraded.token;
+      if (upgraded.userToken) patch.userAccessToken = upgraded.userToken;
       patch.tokenExpiresAt = upgraded.status.expiresAt;
       patch.lastError = null;
     }

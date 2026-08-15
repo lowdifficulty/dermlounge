@@ -17,6 +17,8 @@ const nextConfig: NextConfig = {
       beforeFiles: [
         { source: "/api/meta/leads", destination: "/api/meta/leads/" },
         { source: "/api/cron/meta-leads", destination: "/api/cron/meta-leads/" },
+        { source: "/api/admin/meta/insights", destination: "/api/admin/meta/insights/" },
+        { source: "/api/admin/meta/creative", destination: "/api/admin/meta/creative/" },
       ],
     };
   },

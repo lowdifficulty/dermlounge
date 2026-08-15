@@ -95,6 +95,7 @@ function NavIcon({ id }: { id: string }) {
         </svg>
       );
     case "analytics":
+    case "metaAds":
       return (
         <svg className={common} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8">
           <path d="M4 19V5M10 19V9M16 19v-6M22 19V7" />

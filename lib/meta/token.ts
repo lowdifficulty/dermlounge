@@ -85,11 +85,17 @@ export async function inspectMetaAccessToken(token?: string | null): Promise<Met
 export async function ensureLongLivedPageToken(
   pageId: string,
   rawToken: string
-): Promise<{ token: string; exchanged: boolean; status: MetaTokenStatus }> {
+): Promise<{
+  token: string;
+  userToken?: string;
+  exchanged: boolean;
+  status: MetaTokenStatus;
+}> {
   const token = rawToken.trim();
   const appId = await resolveMetaAppId();
   const appSecret = await resolveMetaAppSecret();
   let working = token;
+  let userToken: string | undefined;
   let exchanged = false;
 
   if (appId && appSecret) {
@@ -113,6 +119,7 @@ export async function ensureLongLivedPageToken(
         fields: "access_token",
       });
       if (page.access_token && page.access_token !== working) {
+        userToken = working;
         working = page.access_token;
         exchanged = true;
       }
@@ -125,5 +132,5 @@ export async function ensureLongLivedPageToken(
   if (!status.valid) {
     throw new Error(status.error || "Meta Page access token is not valid");
   }
-  return { token: working, exchanged, status };
+  return { token: working, userToken, exchanged, status };
 }

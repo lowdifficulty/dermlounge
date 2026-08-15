@@ -21,8 +21,10 @@ type MetaStatus = {
   };
   config: {
     pageId: string;
+    adAccountId?: string;
     pageAccessTokenMasked: string;
     hasPageAccessToken: boolean;
+    hasUserAccessToken?: boolean;
     hasAppSecret?: boolean;
     lastSyncAt?: string;
     lastSyncCount?: number;
@@ -44,6 +46,7 @@ type MetaStatus = {
 export default function MetaLeadsPanel() {
   const [status, setStatus] = useState<MetaStatus | null>(null);
   const [pageId, setPageId] = useState("");
+  const [adAccountId, setAdAccountId] = useState("");
   const [pageAccessToken, setPageAccessToken] = useState("");
   const [verifyToken, setVerifyToken] = useState("");
   const [appSecret, setAppSecret] = useState("");
@@ -62,6 +65,7 @@ export default function MetaLeadsPanel() {
       const data = (await res.json()) as MetaStatus;
       setStatus(data);
       setPageId(data.config.pageId || "");
+      setAdAccountId(data.config.adAccountId || "");
       setVerifyToken(data.verifyToken || "");
     } catch (e) {
       setError(e instanceof Error ? e.message : "Load failed");
@@ -84,6 +88,7 @@ export default function MetaLeadsPanel() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           pageId,
+          adAccountId,
           verifyToken,
           ...(pageAccessToken.trim() ? { pageAccessToken } : {}),
           ...(appSecret.trim() ? { appSecret } : {}),
@@ -103,6 +108,7 @@ export default function MetaLeadsPanel() {
       );
       setStatus(data);
       setPageId(data.config.pageId || pageId);
+      setAdAccountId(data.config.adAccountId || adAccountId);
       setVerifyToken(data.verifyToken || verifyToken);
     } catch (e) {
       setError(e instanceof Error ? e.message : "Save failed");
@@ -221,6 +227,21 @@ export default function MetaLeadsPanel() {
 
         <label className="block">
           <span className="text-xs uppercase tracking-wide text-gray-500 font-semibold">
+            Ad account ID
+          </span>
+          <input
+            value={adAccountId}
+            onChange={(e) => setAdAccountId(e.target.value)}
+            placeholder="593540209723240"
+            className="mt-1 w-full border border-gray-200 rounded-lg px-3 py-2 text-sm font-mono"
+          />
+          <p className="text-xs text-gray-500 mt-1">
+            Used for Ads performance (CPC, CPL, CTR). Default is the MyDermLounge ad account.
+          </p>
+        </label>
+
+        <label className="block">
+          <span className="text-xs uppercase tracking-wide text-gray-500 font-semibold">
             Page access token
           </span>
           <input
@@ -230,7 +251,7 @@ export default function MetaLeadsPanel() {
             placeholder={
               status?.config.hasPageAccessToken
                 ? `Saved ${status.config.pageAccessTokenMasked} — paste a new token to replace`
-                : "Paste a Page token with leads_retrieval"
+                : "Paste a Page or user token with leads_retrieval and ads_read"
             }
             className="mt-1 w-full border border-gray-200 rounded-lg px-3 py-2 text-sm font-mono"
             autoComplete="off"
@@ -253,14 +274,14 @@ export default function MetaLeadsPanel() {
 
         <label className="block">
           <span className="text-xs uppercase tracking-wide text-gray-500 font-semibold">
-            App secret (optional, for webhook signatures)
+            App secret (required)
           </span>
           <input
             type="password"
             value={appSecret}
             onChange={(e) => setAppSecret(e.target.value)}
             placeholder={
-              status?.config.hasAppSecret ? "Saved — paste to replace" : "Optional"
+              status?.config.hasAppSecret ? "Saved — paste to replace" : "Required for Graph appsecret_proof"
             }
             className="mt-1 w-full border border-gray-200 rounded-lg px-3 py-2 text-sm font-mono"
             autoComplete="off"
@@ -275,8 +296,10 @@ export default function MetaLeadsPanel() {
           <p>
             In the Meta app, add this webhook, subscribe the Page to{" "}
             <code>leadgen</code>, and keep the verify token above. Token needs{" "}
-            <code>leads_retrieval</code>, <code>pages_manage_metadata</code>, and{" "}
-            <code>pages_show_list</code>.
+            <code>leads_retrieval</code>, <code>pages_manage_metadata</code>,{" "}
+            <code>pages_show_list</code>, and <code>ads_read</code> (Ads performance).
+            The MyDermLounge app has Require App Secret on — save the app secret here
+            so Graph calls can send <code>appsecret_proof</code>.
           </p>
           {status?.config.lastWebhookAt && (
             <p>

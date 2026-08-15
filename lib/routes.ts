@@ -6,6 +6,7 @@ export const ROUTES = {
   dataDeletion: "/data-deletion/",
   adminLogin: "/admin/login",
   adminDashboard: "/admin/dashboard",
+  adminMetaAds: "/admin/meta-ads/",
 } as const;
 
 export const routes = ROUTES;

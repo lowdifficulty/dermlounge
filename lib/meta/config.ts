@@ -10,10 +10,16 @@ const REDIS_KEY = "dl:meta-config";
 
 export const META_GRAPH_VERSION = "v21.0";
 export const DEFAULT_META_VERIFY_TOKEN = "dermlounge-lead-webhook";
+/** MyDermLounge Ads Manager account (act_593540209723240). */
+export const DEFAULT_META_AD_ACCOUNT_ID = "593540209723240";
+export const META_INSIGHTS_CACHE_TTL_SEC = 10 * 60;
 
 export interface MetaRuntimeConfig {
   pageId?: string;
   pageAccessToken?: string;
+  /** Long-lived user token for Marketing API insights (`ads_read`). */
+  userAccessToken?: string;
+  adAccountId?: string;
   verifyToken?: string;
   appId?: string;
   appSecret?: string;
@@ -75,6 +81,12 @@ export async function writeMetaRuntimeConfig(
   if (typeof next.pageAccessToken === "string") {
     next.pageAccessToken = next.pageAccessToken.trim();
   }
+  if (typeof next.userAccessToken === "string") {
+    next.userAccessToken = next.userAccessToken.trim();
+  }
+  if (typeof next.adAccountId === "string") {
+    next.adAccountId = next.adAccountId.trim().replace(/^act_/i, "");
+  }
   if (typeof next.verifyToken === "string") next.verifyToken = next.verifyToken.trim();
   if (typeof next.appId === "string") next.appId = next.appId.trim();
   if (typeof next.appSecret === "string") next.appSecret = next.appSecret.trim();
@@ -125,6 +137,30 @@ export async function resolveMetaAppId(): Promise<string | null> {
   if (env) return env;
   const cfg = await readMetaRuntimeConfig();
   return cfg.appId?.trim() || null;
+}
+
+export function normalizeMetaAdAccountId(raw?: string | null): string {
+  const id = (raw || "").trim().replace(/^act_/i, "");
+  return id || DEFAULT_META_AD_ACCOUNT_ID;
+}
+
+export async function resolveMetaAdAccountId(): Promise<string> {
+  const env = process.env.META_AD_ACCOUNT_ID?.trim();
+  if (env) return normalizeMetaAdAccountId(env);
+  const cfg = await readMetaRuntimeConfig();
+  return normalizeMetaAdAccountId(cfg.adAccountId);
+}
+
+export function metaAdAccountPath(adAccountId: string): string {
+  return `act_${normalizeMetaAdAccountId(adAccountId)}`;
+}
+
+/** Prefer a user token with ads_read; fall back to the Page token used for leads. */
+export async function resolveMetaAdsAccessToken(): Promise<string | null> {
+  const cfg = await readMetaRuntimeConfig();
+  const user = cfg.userAccessToken?.trim();
+  if (user) return user;
+  return resolveMetaPageAccessToken();
 }
 
 export async function isMetaAutoSmsEnabled(): Promise<boolean> {

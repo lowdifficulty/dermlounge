@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import AdminAppShell, { type AdminNavItem } from "@/components/admin/AdminAppShell";
 import CrmPanel from "@/components/crm/CrmPanel";
@@ -8,8 +8,8 @@ import OpportunitiesPanel from "@/components/crm/OpportunitiesPanel";
 import CrmContactsPanel from "@/components/crm/CrmContactsPanel";
 import PhoneSmsPanel from "@/components/admin/PhoneSmsPanel";
 import PeoplePanel from "@/components/admin/PeoplePanel";
-
-type Tab = "crm" | "contacts" | "opportunities" | "people" | "phoneSms";
+import MetaAdsDashboard from "@/components/admin/MetaAdsDashboard";
+import { adminTabHref, type AdminTab } from "@/lib/admin/tabs";
 
 const NAV: AdminNavItem[] = [
   { id: "crm", label: "Conversations", group: "CRM" },
@@ -17,11 +17,16 @@ const NAV: AdminNavItem[] = [
   { id: "opportunities", label: "Opportunities", group: "CRM" },
   { id: "people", label: "People", group: "Admin" },
   { id: "phoneSms", label: "Phone & SMS", group: "Messaging" },
+  { id: "metaAds", label: "Meta Ads", group: "Ads" },
 ];
 
-export default function AdminDashboard() {
+export default function AdminDashboard({ initialTab = "crm" }: { initialTab?: AdminTab }) {
   const router = useRouter();
-  const [tab, setTab] = useState<Tab>("crm");
+  const [tab, setTab] = useState<AdminTab>(initialTab);
+
+  useEffect(() => {
+    setTab(initialTab);
+  }, [initialTab]);
 
   async function logout() {
     await fetch("/api/auth/logout", { method: "POST" });
@@ -35,7 +40,17 @@ export default function AdminDashboard() {
     } catch {
       /* ignore */
     }
-    setTab("crm");
+    selectTab("crm");
+  }
+
+  function selectTab(id: string) {
+    const next = id as AdminTab;
+    if (next === tab) return;
+    if (next === "metaAds" || tab === "metaAds") {
+      router.push(adminTabHref(next));
+      return;
+    }
+    setTab(next);
   }
 
   return (
@@ -43,11 +58,20 @@ export default function AdminDashboard() {
       title="Admin"
       items={NAV}
       activeId={tab}
-      onSelect={(id) => setTab(id as Tab)}
+      onSelect={selectTab}
       onLogout={logout}
+      headerTitle={tab === "metaAds" ? "Meta Ads" : undefined}
       lockViewport={tab === "crm"}
     >
-      <div className={tab === "crm" ? "h-full min-h-0 overflow-hidden" : "p-4 md:p-6"}>
+      <div
+        className={
+          tab === "crm"
+            ? "h-full min-h-0 overflow-hidden"
+            : tab === "metaAds"
+              ? "min-h-full"
+              : "p-4 md:p-6"
+        }
+      >
         {tab === "crm" && <CrmPanel />}
         {tab === "contacts" && (
           <CrmContactsPanel onOpenConversation={openCrmConversation} />
@@ -57,6 +81,7 @@ export default function AdminDashboard() {
         )}
         {tab === "people" && <PeoplePanel />}
         {tab === "phoneSms" && <PhoneSmsPanel />}
+        {tab === "metaAds" && <MetaAdsDashboard />}
       </div>
     </AdminAppShell>
   );
