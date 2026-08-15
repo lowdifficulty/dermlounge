@@ -1,60 +1,135 @@
-{
-  "redirects": [
-    {
-      "source": "/infected-and-inflammatory-wound-care/",
-      "destination": "/advanced-wound-care-services/infected-and-inflammatory-wound-care/",
-      "permanent": true
-    },
-    {
-      "source": "/non-healing-wound-care/",
-      "destination": "/advanced-wound-care-services/non-healing-wound-care/",
-      "permanent": true
-    },
-    {
-      "source": "/moisture-related-skin-breakdown/",
-      "destination": "/advanced-wound-care-services/moisture-related-skin-breakdown/",
-      "permanent": true
-    },
-    {
-      "source": "/traumatic-wound-care/",
-      "destination": "/advanced-wound-care-services/traumatic-wound-care/",
-      "permanent": true
-    },
-    {
-      "source": "/surgical-and-post-procedure-wound-care/",
-      "destination": "/advanced-wound-care-services/surgical-and-post-procedure-wound-care/",
-      "permanent": true
-    },
-    {
-      "source": "/circulation-related-ulcer-care/",
-      "destination": "/advanced-wound-care-services/circulation-related-ulcer-care/",
-      "permanent": true
-    },
-    {
-      "source": "/pressure-related-wounds/",
-      "destination": "/advanced-wound-care-services/pressure-related-wounds/",
-      "permanent": true
-    }
-  ],
-  "headers": [
-    {
-      "source": "/assets/(.*)",
-      "headers": [
-        {
-          "key": "Cache-Control",
-          "value": "public, max-age=31536000, immutable"
-        }
-      ]
-    },
-    {
-      "source": "/_next/static/(.*)",
-      "headers": [
-        {
-          "key": "Cache-Control",
-          "value": "public, max-age=31536000, immutable"
-        }
-      ]
-    }
-  ]
-}
-
+{
+
+  "crons": [
+    {
+      "path": "/api/cron/meta-leads/",
+      "schedule": "*/15 * * * *"
+    }
+  ],
+  "rewrites": [
+    {
+      "source": "/api/meta/leads",
+      "destination": "/api/meta/leads/"
+    },
+    {
+      "source": "/api/cron/meta-leads",
+      "destination": "/api/cron/meta-leads/"
+    }
+  ],
+  "redirects": [
+
+    {
+
+      "source": "/infected-and-inflammatory-wound-care/",
+
+      "destination": "/advanced-wound-care-services/infected-and-inflammatory-wound-care/",
+
+      "permanent": true
+
+    },
+
+    {
+
+      "source": "/non-healing-wound-care/",
+
+      "destination": "/advanced-wound-care-services/non-healing-wound-care/",
+
+      "permanent": true
+
+    },
+
+    {
+
+      "source": "/moisture-related-skin-breakdown/",
+
+      "destination": "/advanced-wound-care-services/moisture-related-skin-breakdown/",
+
+      "permanent": true
+
+    },
+
+    {
+
+      "source": "/traumatic-wound-care/",
+
+      "destination": "/advanced-wound-care-services/traumatic-wound-care/",
+
+      "permanent": true
+
+    },
+
+    {
+
+      "source": "/surgical-and-post-procedure-wound-care/",
+
+      "destination": "/advanced-wound-care-services/surgical-and-post-procedure-wound-care/",
+
+      "permanent": true
+
+    },
+
+    {
+
+      "source": "/circulation-related-ulcer-care/",
+
+      "destination": "/advanced-wound-care-services/circulation-related-ulcer-care/",
+
+      "permanent": true
+
+    },
+
+    {
+
+      "source": "/pressure-related-wounds/",
+
+      "destination": "/advanced-wound-care-services/pressure-related-wounds/",
+
+      "permanent": true
+
+    }
+
+  ],
+
+  "headers": [
+
+    {
+
+      "source": "/assets/(.*)",
+
+      "headers": [
+
+        {
+
+          "key": "Cache-Control",
+
+          "value": "public, max-age=31536000, immutable"
+
+        }
+
+      ]
+
+    },
+
+    {
+
+      "source": "/_next/static/(.*)",
+
+      "headers": [
+
+        {
+
+          "key": "Cache-Control",
+
+          "value": "public, max-age=31536000, immutable"
+
+        }
+
+      ]
+
+    }
+
+  ]
+
+}
+
+

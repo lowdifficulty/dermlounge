@@ -20,6 +20,10 @@ export interface MetaRuntimeConfig {
   autoSmsEnabled?: boolean;
   lastSyncAt?: string;
   lastSyncCount?: number;
+  lastWebhookAt?: string;
+  lastWebhookCount?: number;
+  lastError?: string | null;
+  tokenExpiresAt?: string | null;
   updatedAt?: string;
 }
 
@@ -94,10 +98,10 @@ export async function resolveMetaPageId(): Promise<string | null> {
 }
 
 export async function resolveMetaPageAccessToken(): Promise<string | null> {
-  const env = process.env.META_PAGE_ACCESS_TOKEN?.trim();
-  if (env) return env;
   const cfg = await readMetaRuntimeConfig();
-  return cfg.pageAccessToken?.trim() || null;
+  const stored = cfg.pageAccessToken?.trim();
+  if (stored) return stored;
+  return process.env.META_PAGE_ACCESS_TOKEN?.trim() || null;
 }
 
 export async function resolveMetaVerifyToken(): Promise<string> {
@@ -114,6 +118,10 @@ export async function resolveMetaAppSecret(): Promise<string | null> {
   return cfg.appSecret?.trim() || null;
 }
 
+export async function resolveMetaAppId(): Promise<string | null> {
+  return process.env.META_APP_ID?.trim() || null;
+}
+
 export async function isMetaAutoSmsEnabled(): Promise<boolean> {
   if (process.env.META_LEAD_AUTO_SMS === "1" || process.env.META_LEAD_AUTO_SMS === "true") {
     return true;
@@ -122,7 +130,7 @@ export async function isMetaAutoSmsEnabled(): Promise<boolean> {
 }
 
 export function metaWebhookUrl(base = companyLegal.siteUrl): string {
-  return `${base.replace(/\/$/, "")}/api/meta/leads`;
+  return `${base.replace(/\/$/, "")}/api/meta/leads/`;
 }
 
 export function maskSecret(value?: string | null): string {

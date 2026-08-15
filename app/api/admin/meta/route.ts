@@ -11,24 +11,27 @@ import {
   type MetaRuntimeConfig,
 } from "@/lib/meta/config";
 import { syncExistingMetaLeads } from "@/lib/meta/leads";
+import { readLeadgenSubscription, subscribePageToLeadgen } from "@/lib/meta/subscribe";
+import { ensureLongLivedPageToken, inspectMetaAccessToken } from "@/lib/meta/token";
 
-export async function GET() {
-  try {
-    await requireAdmin();
-  } catch {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  }
-
+async function metaStatusPayload() {
   const config = await readMetaRuntimeConfig();
   const pageId = await resolveMetaPageId();
   const token = await resolveMetaPageAccessToken();
   const verifyToken = await resolveMetaVerifyToken();
+  const tokenStatus = await inspectMetaAccessToken(token);
+  const subscription = tokenStatus.valid
+    ? await readLeadgenSubscription()
+    : { subscribed: false, fields: [] as string[], error: tokenStatus.error };
 
-  return NextResponse.json({
+  return {
     connected: Boolean(pageId && token),
+    instant: true,
     webhookUrl: metaWebhookUrl(),
     verifyToken,
     autoSmsEnabled: false,
+    token: tokenStatus,
+    subscription,
     config: {
       pageId: pageId || "",
       pageAccessTokenMasked: maskSecret(token),
@@ -38,9 +41,23 @@ export async function GET() {
       ),
       lastSyncAt: config.lastSyncAt,
       lastSyncCount: config.lastSyncCount,
+      lastWebhookAt: config.lastWebhookAt,
+      lastWebhookCount: config.lastWebhookCount,
+      lastError: config.lastError || tokenStatus.error || null,
+      tokenExpiresAt: tokenStatus.expiresAt,
       updatedAt: config.updatedAt,
     },
-  });
+  };
+}
+
+export async function GET() {
+  try {
+    await requireAdmin();
+  } catch {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
+
+  return NextResponse.json(await metaStatusPayload());
 }
 
 export async function PATCH(request: Request) {
@@ -60,28 +77,52 @@ export async function PATCH(request: Request) {
       appSecret: body.appSecret,
       autoSmsEnabled: false,
     };
-    if (typeof body.pageAccessToken === "string" && body.pageAccessToken.trim()) {
-      patch.pageAccessToken = body.pageAccessToken;
+
+    const incomingToken =
+      typeof body.pageAccessToken === "string" ? body.pageAccessToken.trim() : "";
+    const pageId = (body.pageId || (await resolveMetaPageId()) || "").trim();
+    if (incomingToken) {
+      if (!pageId) {
+        return NextResponse.json(
+          { error: "Facebook Page ID is required before saving a token" },
+          { status: 400 }
+        );
+      }
+      const upgraded = await ensureLongLivedPageToken(pageId, incomingToken);
+      patch.pageAccessToken = upgraded.token;
+      patch.tokenExpiresAt = upgraded.status.expiresAt;
+      patch.lastError = null;
     }
-    const config = await writeMetaRuntimeConfig(patch);
+
+    await writeMetaRuntimeConfig(patch);
+
+    let subscription = null;
+    let sync = null;
+    try {
+      subscription = await subscribePageToLeadgen();
+    } catch (err) {
+      subscription = {
+        subscribed: false,
+        fields: [],
+        error: err instanceof Error ? err.message : "Subscribe failed",
+      };
+    }
+
+    if (incomingToken) {
+      try {
+        sync = await syncExistingMetaLeads();
+      } catch (err) {
+        sync = {
+          error: err instanceof Error ? err.message : "Sync failed",
+        };
+      }
+    }
+
     return NextResponse.json({
       ok: true,
-      connected: Boolean(
-        (await resolveMetaPageId()) && (await resolveMetaPageAccessToken())
-      ),
-      webhookUrl: metaWebhookUrl(),
-      verifyToken: await resolveMetaVerifyToken(),
-      config: {
-        pageId: config.pageId || "",
-        pageAccessTokenMasked: maskSecret(
-          process.env.META_PAGE_ACCESS_TOKEN || config.pageAccessToken
-        ),
-        hasPageAccessToken: Boolean(
-          process.env.META_PAGE_ACCESS_TOKEN?.trim() || config.pageAccessToken
-        ),
-        lastSyncAt: config.lastSyncAt,
-        lastSyncCount: config.lastSyncCount,
-      },
+      ...(await metaStatusPayload()),
+      subscription,
+      sync,
     });
   } catch (err) {
     return NextResponse.json(
@@ -99,6 +140,17 @@ export async function POST(request: Request) {
   }
 
   const body = (await request.json().catch(() => ({}))) as { action?: string };
+  if (body.action === "subscribe") {
+    try {
+      const subscription = await subscribePageToLeadgen();
+      return NextResponse.json({ ok: true, subscription });
+    } catch (err) {
+      return NextResponse.json(
+        { error: err instanceof Error ? err.message : "Subscribe failed" },
+        { status: 400 }
+      );
+    }
+  }
   if (body.action !== "sync") {
     return NextResponse.json({ error: "Unknown action" }, { status: 400 });
   }

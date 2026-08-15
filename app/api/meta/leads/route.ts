@@ -5,6 +5,7 @@ import {
   verifyMetaSignature,
 } from "@/lib/meta/webhook";
 import { ingestLeadgenId } from "@/lib/meta/leads";
+import { writeMetaRuntimeConfig } from "@/lib/meta/config";
 
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
@@ -38,19 +39,39 @@ export async function POST(request: Request) {
 
   const notifications = parseLeadgenNotifications(payload);
   const results = [];
+  const errors: string[] = [];
   for (const item of notifications) {
     try {
       results.push(await ingestLeadgenId(item.leadgenId));
     } catch (err) {
+      const reason = err instanceof Error ? err.message : "ingest failed";
       console.error("Meta lead ingest failed:", item.leadgenId, err);
+      errors.push(`${item.leadgenId}: ${reason}`);
       results.push({
         leadgenId: item.leadgenId,
         created: false,
         updated: false,
         skipped: true,
-        reason: err instanceof Error ? err.message : "ingest failed",
+        reason,
       });
     }
+  }
+
+  try {
+    await writeMetaRuntimeConfig({
+      lastWebhookAt: new Date().toISOString(),
+      lastWebhookCount: notifications.length,
+      lastError: errors[0] || null,
+    });
+  } catch (err) {
+    console.error("Could not persist Meta webhook status:", err);
+  }
+
+  if (errors.length > 0) {
+    return NextResponse.json(
+      { ok: false, count: results.length, results, errors },
+      { status: 500 }
+    );
   }
 
   return NextResponse.json({ ok: true, count: results.length, results });

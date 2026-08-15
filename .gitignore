@@ -11,3 +11,4 @@ lighthouse*.json
 lh-*.json
 .vercel
 data/staff-accounts.json
+data/meta-config.json

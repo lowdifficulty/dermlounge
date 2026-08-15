@@ -9,12 +9,8 @@ import {
   upsertContact,
 } from "@/lib/crm/store";
 import type { CrmContact } from "@/lib/crm/types";
-import {
-  META_GRAPH_VERSION,
-  resolveMetaPageAccessToken,
-  resolveMetaPageId,
-  writeMetaRuntimeConfig,
-} from "./config";
+import { resolveMetaPageAccessToken, resolveMetaPageId, writeMetaRuntimeConfig } from "./config";
+import { graphGet } from "./graph";
 
 export type GraphLeadField = { name: string; values: string[] };
 
@@ -124,20 +120,6 @@ export function parseGraphLead(lead: GraphLead): {
   };
 }
 
-async function graphGet<T>(path: string, token: string, search?: Record<string, string>): Promise<T> {
-  const url = new URL(`https://graph.facebook.com/${META_GRAPH_VERSION}/${path.replace(/^\//, "")}`);
-  url.searchParams.set("access_token", token);
-  for (const [key, value] of Object.entries(search ?? {})) {
-    url.searchParams.set(key, value);
-  }
-  const res = await fetch(url, { cache: "no-store" });
-  const json = (await res.json()) as T & { error?: { message?: string } };
-  if (!res.ok || json.error) {
-    throw new Error(json.error?.message || `Meta Graph error ${res.status}`);
-  }
-  return json;
-}
-
 export async function fetchGraphLead(leadgenId: string, token?: string): Promise<GraphLead> {
   const access = token || (await resolveMetaPageAccessToken());
   if (!access) throw new Error("Meta Page access token is not configured");
@@ -163,7 +145,7 @@ async function fetchAllPages<T>(firstUrlPath: string, token: string, search: Rec
   return items;
 }
 
-export async function listPageGraphLeads(): Promise<GraphLead[]> {
+export async function listPageGraphLeads(options?: { since?: Date }): Promise<GraphLead[]> {
   const token = await resolveMetaPageAccessToken();
   const pageId = await resolveMetaPageId();
   if (!token) throw new Error("Meta Page access token is not configured");
@@ -175,12 +157,20 @@ export async function listPageGraphLeads(): Promise<GraphLead[]> {
     { fields: "id,name,status", limit: "100" }
   );
 
+  const leadSearch: Record<string, string> = {
+    fields: "id,created_time,ad_id,ad_name,form_id,field_data",
+    limit: "100",
+  };
+  if (options?.since) {
+    const unix = Math.floor(options.since.getTime() / 1000);
+    leadSearch.filtering = JSON.stringify([
+      { field: "time_created", operator: "GREATER_THAN", value: unix },
+    ]);
+  }
+
   const leads: GraphLead[] = [];
   for (const form of forms) {
-    const formLeads = await fetchAllPages<GraphLead>(`${form.id}/leads`, token, {
-      fields: "id,created_time,ad_id,ad_name,form_id,field_data",
-      limit: "100",
-    });
+    const formLeads = await fetchAllPages<GraphLead>(`${form.id}/leads`, token, leadSearch);
     leads.push(...formLeads);
   }
   return leads;
@@ -347,14 +337,14 @@ export async function ingestLeadgenId(leadgenId: string): Promise<IngestResult> 
   return ingestGraphLead(graphLead);
 }
 
-export async function syncExistingMetaLeads(): Promise<{
+export async function syncExistingMetaLeads(options?: { since?: Date }): Promise<{
   fetched: number;
   created: number;
   updated: number;
   skipped: number;
   errors: string[];
 }> {
-  const graphLeads = await listPageGraphLeads();
+  const graphLeads = await listPageGraphLeads(options);
   let created = 0;
   let updated = 0;
   let skipped = 0;
@@ -376,7 +366,13 @@ export async function syncExistingMetaLeads(): Promise<{
   await writeMetaRuntimeConfig({
     lastSyncAt: new Date().toISOString(),
     lastSyncCount: graphLeads.length,
+    lastError: errors[0] || null,
   });
 
   return { fetched: graphLeads.length, created, updated, skipped, errors };
+}
+
+export async function syncRecentMetaLeads(lookbackHours = 72) {
+  const since = new Date(Date.now() - lookbackHours * 60 * 60 * 1000);
+  return syncExistingMetaLeads({ since });
 }
