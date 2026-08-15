@@ -19,6 +19,8 @@ const nextConfig: NextConfig = {
         { source: "/api/cron/meta-leads", destination: "/api/cron/meta-leads/" },
         { source: "/api/admin/meta/insights", destination: "/api/admin/meta/insights/" },
         { source: "/api/admin/meta/creative", destination: "/api/admin/meta/creative/" },
+        { source: "/api/admin/meta/oauth", destination: "/api/admin/meta/oauth/" },
+        { source: "/api/admin/meta/oauth/callback", destination: "/api/admin/meta/oauth/callback/" },
       ],
     };
   },

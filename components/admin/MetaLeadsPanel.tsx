@@ -1,45 +1,21 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
+import MetaConnectionCard, {
+  type MetaConnectionStatus,
+} from "@/components/admin/MetaConnectionCard";
 
-type MetaStatus = {
-  connected: boolean;
-  instant?: boolean;
+type MetaStatus = MetaConnectionStatus & {
   webhookUrl: string;
   verifyToken: string;
   autoSmsEnabled: boolean;
-  token?: {
-    valid: boolean;
-    expiresAt: string | null;
-    neverExpires: boolean;
-    error?: string;
-  };
-  subscription?: {
-    subscribed: boolean;
-    fields: string[];
-    error?: string;
-  };
-  config: {
-    pageId: string;
+  config: MetaConnectionStatus["config"] & {
     adAccountId?: string;
     pageAccessTokenMasked: string;
     hasPageAccessToken: boolean;
     hasUserAccessToken?: boolean;
     hasAppSecret?: boolean;
-    lastSyncAt?: string;
-    lastSyncCount?: number;
-    lastWebhookAt?: string;
-    lastWebhookCount?: number;
-    lastError?: string | null;
     tokenExpiresAt?: string | null;
-  };
-  sync?: {
-    fetched?: number;
-    created?: number;
-    updated?: number;
-    skipped?: number;
-    errors?: string[];
-    error?: string;
   };
 };
 
@@ -53,12 +29,14 @@ export default function MetaLeadsPanel() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [syncing, setSyncing] = useState(false);
+  const [disconnecting, setDisconnecting] = useState(false);
+  const [showAdvanced, setShowAdvanced] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [connectFailed, setConnectFailed] = useState(false);
 
   const load = useCallback(async () => {
     setLoading(true);
-    setError(null);
     try {
       const res = await fetch("/api/admin/meta");
       if (!res.ok) throw new Error("Could not load Meta settings");
@@ -77,6 +55,20 @@ export default function MetaLeadsPanel() {
   useEffect(() => {
     void load();
   }, [load]);
+
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    if (params.get("meta") === "connected") {
+      setMessage("Meta is connected. Instant Form leads will enter CRM automatically.");
+      setConnectFailed(false);
+    }
+    const err = params.get("meta_error");
+    if (err) {
+      setError(err);
+      setConnectFailed(true);
+      setShowAdvanced(true);
+    }
+  }, []);
 
   async function save() {
     setSaving(true);
@@ -98,18 +90,15 @@ export default function MetaLeadsPanel() {
       if (!res.ok) throw new Error(data.error || "Save failed");
       setPageAccessToken("");
       setAppSecret("");
-      const sync = data.sync;
-      const imported =
-        sync && typeof sync.created === "number"
-          ? ` Imported ${sync.created} new lead(s), ${sync.updated ?? 0} updated.`
-          : "";
-      setMessage(
-        `Meta connection saved. New Instant Form leads go to CRM automatically.${imported} Auto SMS stays off.`
-      );
       setStatus(data);
       setPageId(data.config.pageId || pageId);
       setAdAccountId(data.config.adAccountId || adAccountId);
       setVerifyToken(data.verifyToken || verifyToken);
+      setMessage(
+        data.connected
+          ? "System User token saved. Instant Form leads will enter CRM automatically."
+          : "Settings saved."
+      );
     } catch (e) {
       setError(e instanceof Error ? e.message : "Save failed");
     } finally {
@@ -129,8 +118,7 @@ export default function MetaLeadsPanel() {
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || "Sync failed");
-      const errNote =
-        data.errors?.length > 0 ? ` ${data.errors.length} error(s).` : "";
+      const errNote = data.errors?.length > 0 ? ` ${data.errors.length} error(s).` : "";
       setMessage(
         `Pulled ${data.fetched} Meta lead(s): ${data.created} new, ${data.updated} updated, ${data.skipped} skipped.${errNote} No SMS sent.`
       );
@@ -142,23 +130,41 @@ export default function MetaLeadsPanel() {
     }
   }
 
+  async function disconnect() {
+    if (!window.confirm("Disconnect Meta? Instant Form leads will stop entering CRM until you connect again.")) {
+      return;
+    }
+    setDisconnecting(true);
+    setMessage(null);
+    setError(null);
+    try {
+      const res = await fetch("/api/admin/meta", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ action: "disconnect" }),
+      });
+      const data = (await res.json()) as MetaStatus & { error?: string };
+      if (!res.ok) throw new Error(data.error || "Disconnect failed");
+      setStatus(data);
+      setMessage("Meta disconnected.");
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Disconnect failed");
+    } finally {
+      setDisconnecting(false);
+    }
+  }
+
   if (loading && !status) {
     return <div className="p-6 text-sm text-gray-500">Loading Meta Lead Ads…</div>;
   }
-
-  const tokenValid = status?.token?.valid === true;
-  const tokenError = status?.token?.error || status?.config.lastError;
-  const subscribed = status?.subscription?.subscribed === true;
 
   return (
     <div className="p-4 md:p-6 max-w-4xl space-y-5">
       <div>
         <h2 className="text-xl font-bold text-brand">Meta Lead Ads</h2>
         <p className="text-sm text-gray-600 mt-1">
-          Instant Form leads from Facebook / Instagram land in CRM as{" "}
-          <strong>Wound Care</strong> contacts as soon as Meta sends them. A
-          backup poll every 15 minutes catches anything the webhook misses. You
-          do not need to ask an agent to pull leads. Automatic SMS stays off.
+          Click <strong>Connect Meta</strong> once. Instant Form leads land in CRM as{" "}
+          <strong>Wound Care</strong> contacts. Automatic SMS stays off.
         </p>
       </div>
 
@@ -172,170 +178,126 @@ export default function MetaLeadsPanel() {
           {error}
         </div>
       )}
-      {tokenError && !tokenValid && (
-        <div className="rounded-xl border border-amber-200 bg-amber-50 text-amber-950 px-4 py-3 text-sm space-y-1">
-          <p className="font-semibold">
-            {/session has expired/i.test(tokenError || "")
-              ? "Meta expired this token session."
-              : "Meta rejected the stored Page token."}
+
+      <MetaConnectionCard
+        status={status}
+        disconnecting={disconnecting}
+        onDisconnect={() => void disconnect()}
+        connectFailed={connectFailed}
+      />
+
+      <div className="flex flex-wrap gap-2">
+        <button
+          type="button"
+          onClick={() => void syncLeads()}
+          disabled={syncing || !status?.connected}
+          className="px-4 py-2 rounded-lg text-sm font-semibold border border-gray-200 disabled:opacity-50"
+        >
+          {syncing ? "Pulling…" : "Pull existing Lead Center leads"}
+        </button>
+      </div>
+
+      <div>
+        <button
+          type="button"
+          onClick={() => setShowAdvanced((open) => !open)}
+          className="text-sm font-semibold text-gray-600 underline-offset-2 hover:underline"
+        >
+          {showAdvanced ? "Hide advanced" : "Advanced: paste a System User token"}
+        </button>
+      </div>
+
+      {showAdvanced && (
+        <div className="bg-white border border-gray-200 rounded-xl p-4 space-y-4">
+          <p className="text-sm text-gray-600">
+            Only paste a Business Manager <strong>System User</strong> token assigned to the
+            DermLounge Page. User tokens from Graph Explorer will be rejected.
           </p>
-          <p>{tokenError}</p>
-          <p>
-            Paste a fresh Page token below and save. Saving exchanges it to a
-            long-lived Page token (when the app secret is set) and imports any
-            Lead Center leads that were missed overnight.
-          </p>
-        </div>
-      )}
 
-      <div className="bg-white border border-gray-200 rounded-xl p-4 space-y-4">
-        <div className="flex flex-wrap items-center gap-2 text-sm">
-          <span
-            className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-semibold ${
-              status?.connected && tokenValid
-                ? "bg-green-50 text-green-800 border border-green-200"
-                : "bg-amber-50 text-amber-800 border border-amber-200"
-            }`}
-          >
-            {status?.connected && tokenValid ? "Connected" : "Needs a valid Page token"}
-          </span>
-          <span
-            className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-semibold ${
-              subscribed
-                ? "bg-green-50 text-green-800 border border-green-200"
-                : "bg-gray-50 text-gray-700 border border-gray-200"
-            }`}
-          >
-            {subscribed ? "leadgen subscribed" : "leadgen not subscribed"}
-          </span>
-          <span className="inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-semibold bg-gray-50 text-gray-700 border border-gray-200">
-            Auto SMS off
-          </span>
-        </div>
+          <label className="block">
+            <span className="text-xs uppercase tracking-wide text-gray-500 font-semibold">
+              Facebook Page ID
+            </span>
+            <input
+              value={pageId}
+              onChange={(e) => setPageId(e.target.value)}
+              placeholder="107183565822734"
+              className="mt-1 w-full border border-gray-200 rounded-lg px-3 py-2 text-sm font-mono"
+            />
+          </label>
 
-        <label className="block">
-          <span className="text-xs uppercase tracking-wide text-gray-500 font-semibold">
-            Facebook Page ID
-          </span>
-          <input
-            value={pageId}
-            onChange={(e) => setPageId(e.target.value)}
-            placeholder="e.g. 1234567890"
-            className="mt-1 w-full border border-gray-200 rounded-lg px-3 py-2 text-sm font-mono"
-          />
-        </label>
+          <label className="block">
+            <span className="text-xs uppercase tracking-wide text-gray-500 font-semibold">
+              Ad account ID
+            </span>
+            <input
+              value={adAccountId}
+              onChange={(e) => setAdAccountId(e.target.value)}
+              placeholder="593540209723240"
+              className="mt-1 w-full border border-gray-200 rounded-lg px-3 py-2 text-sm font-mono"
+            />
+          </label>
 
-        <label className="block">
-          <span className="text-xs uppercase tracking-wide text-gray-500 font-semibold">
-            Ad account ID
-          </span>
-          <input
-            value={adAccountId}
-            onChange={(e) => setAdAccountId(e.target.value)}
-            placeholder="593540209723240"
-            className="mt-1 w-full border border-gray-200 rounded-lg px-3 py-2 text-sm font-mono"
-          />
-          <p className="text-xs text-gray-500 mt-1">
-            Used for Ads performance (CPC, CPL, CTR). Default is the MyDermLounge ad account.
-          </p>
-        </label>
+          <label className="block">
+            <span className="text-xs uppercase tracking-wide text-gray-500 font-semibold">
+              System User token
+            </span>
+            <input
+              type="password"
+              value={pageAccessToken}
+              onChange={(e) => setPageAccessToken(e.target.value)}
+              placeholder={
+                status?.config.hasPageAccessToken
+                  ? `Saved ${status.config.pageAccessTokenMasked} — paste a new token to replace`
+                  : "Paste a System User token assigned to the DermLounge Page"
+              }
+              className="mt-1 w-full border border-gray-200 rounded-lg px-3 py-2 text-sm font-mono"
+              autoComplete="off"
+            />
+          </label>
 
-        <label className="block">
-          <span className="text-xs uppercase tracking-wide text-gray-500 font-semibold">
-            Page access token
-          </span>
-          <input
-            type="password"
-            value={pageAccessToken}
-            onChange={(e) => setPageAccessToken(e.target.value)}
-            placeholder={
-              status?.config.hasPageAccessToken
-                ? `Saved ${status.config.pageAccessTokenMasked} — paste a new token to replace`
-                : "Paste a Page or user token with leads_retrieval and ads_read"
-            }
-            className="mt-1 w-full border border-gray-200 rounded-lg px-3 py-2 text-sm font-mono"
-            autoComplete="off"
-          />
-        </label>
+          <label className="block">
+            <span className="text-xs uppercase tracking-wide text-gray-500 font-semibold">
+              Webhook verify token
+            </span>
+            <input
+              value={verifyToken}
+              onChange={(e) => setVerifyToken(e.target.value)}
+              className="mt-1 w-full border border-gray-200 rounded-lg px-3 py-2 text-sm font-mono"
+            />
+          </label>
 
-        <label className="block">
-          <span className="text-xs uppercase tracking-wide text-gray-500 font-semibold">
-            Webhook verify token
-          </span>
-          <input
-            value={verifyToken}
-            onChange={(e) => setVerifyToken(e.target.value)}
-            className="mt-1 w-full border border-gray-200 rounded-lg px-3 py-2 text-sm font-mono"
-          />
-          <p className="text-xs text-gray-500 mt-1">
-            Paste this exact value into Meta → Webhooks → Verify token.
-          </p>
-        </label>
+          <label className="block">
+            <span className="text-xs uppercase tracking-wide text-gray-500 font-semibold">
+              App secret
+            </span>
+            <input
+              type="password"
+              value={appSecret}
+              onChange={(e) => setAppSecret(e.target.value)}
+              placeholder={
+                status?.config.hasAppSecret ? "Saved — paste to replace" : "Required for Graph appsecret_proof"
+              }
+              className="mt-1 w-full border border-gray-200 rounded-lg px-3 py-2 text-sm font-mono"
+              autoComplete="off"
+            />
+          </label>
 
-        <label className="block">
-          <span className="text-xs uppercase tracking-wide text-gray-500 font-semibold">
-            App secret (required)
-          </span>
-          <input
-            type="password"
-            value={appSecret}
-            onChange={(e) => setAppSecret(e.target.value)}
-            placeholder={
-              status?.config.hasAppSecret ? "Saved — paste to replace" : "Required for Graph appsecret_proof"
-            }
-            className="mt-1 w-full border border-gray-200 rounded-lg px-3 py-2 text-sm font-mono"
-            autoComplete="off"
-          />
-        </label>
-
-        <div className="rounded-lg bg-[#f8fafc] border border-gray-100 px-3 py-2 text-xs text-gray-600 space-y-1">
-          <p>
-            Callback URL:{" "}
+          <p className="text-xs text-gray-500">
+            Webhook URL:{" "}
             <code className="font-mono break-all">{status?.webhookUrl}</code>
           </p>
-          <p>
-            In the Meta app, add this webhook, subscribe the Page to{" "}
-            <code>leadgen</code>, and keep the verify token above. Token needs{" "}
-            <code>leads_retrieval</code>, <code>pages_manage_metadata</code>,{" "}
-            <code>pages_show_list</code>, and <code>ads_read</code> (Ads performance).
-            The MyDermLounge app has Require App Secret on — save the app secret here
-            so Graph calls can send <code>appsecret_proof</code>.
-          </p>
-          {status?.config.lastWebhookAt && (
-            <p>
-              Last webhook: {new Date(status.config.lastWebhookAt).toLocaleString()}{" "}
-              ({status.config.lastWebhookCount ?? 0} lead
-              {status.config.lastWebhookCount === 1 ? "" : "s"})
-            </p>
-          )}
-          {status?.config.lastSyncAt && (
-            <p>
-              Last backup pull: {new Date(status.config.lastSyncAt).toLocaleString()}{" "}
-              ({status.config.lastSyncCount ?? 0} lead
-              {status.config.lastSyncCount === 1 ? "" : "s"})
-            </p>
-          )}
-        </div>
 
-        <div className="flex flex-wrap gap-2">
           <button
             type="button"
             onClick={() => void save()}
             disabled={saving}
-            className="px-4 py-2 rounded-lg text-sm font-semibold bg-accent text-white disabled:opacity-50"
-          >
-            {saving ? "Saving…" : "Save Meta connection"}
-          </button>
-          <button
-            type="button"
-            onClick={() => void syncLeads()}
-            disabled={syncing || !status?.connected}
             className="px-4 py-2 rounded-lg text-sm font-semibold border border-gray-200 disabled:opacity-50"
           >
-            {syncing ? "Pulling…" : "Pull existing Lead Center leads"}
+            {saving ? "Saving…" : "Save System User token"}
           </button>
         </div>
-      </div>
+      )}
     </div>
   );
 }

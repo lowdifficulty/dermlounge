@@ -14,6 +14,14 @@
     {
       "source": "/api/cron/meta-leads",
       "destination": "/api/cron/meta-leads/"
+    },
+    {
+      "source": "/api/admin/meta/oauth",
+      "destination": "/api/admin/meta/oauth/"
+    },
+    {
+      "source": "/api/admin/meta/oauth/callback",
+      "destination": "/api/admin/meta/oauth/callback/"
     }
   ],
   "redirects": [

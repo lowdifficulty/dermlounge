@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { requireAdmin } from "@/lib/scheduling/auth";
 import {
+  DEFAULT_META_PAGE_ID,
   maskSecret,
   metaWebhookUrl,
   readMetaRuntimeConfig,
@@ -11,38 +12,53 @@ import {
   writeMetaRuntimeConfig,
   type MetaRuntimeConfig,
 } from "@/lib/meta/config";
+import { disconnectMetaConnection, finalizeMetaConnection, probeAdsRead } from "@/lib/meta/connect";
 import { syncExistingMetaLeads } from "@/lib/meta/leads";
 import { readLeadgenSubscription, subscribePageToLeadgen } from "@/lib/meta/subscribe";
-import { ensureLongLivedPageToken, inspectMetaAccessToken } from "@/lib/meta/token";
+import { inspectMetaAccessToken, resolvePermanentPageToken } from "@/lib/meta/token";
 import { clearMetaInsightsCache } from "@/lib/meta/insights";
+import {
+  LOCAL_OAUTH_REDIRECT_URI,
+  PRODUCTION_OAUTH_REDIRECT_URI,
+  metaOAuthRedirectUri,
+  metaOAuthStartPath,
+} from "@/lib/meta/oauth";
 
-async function metaStatusPayload() {
+async function metaStatusPayload(request?: Request) {
   const config = await readMetaRuntimeConfig();
-  const pageId = await resolveMetaPageId();
+  const pageId = (await resolveMetaPageId()) || DEFAULT_META_PAGE_ID;
   const token = await resolveMetaPageAccessToken();
   const verifyToken = await resolveMetaVerifyToken();
   const tokenStatus = await inspectMetaAccessToken(token);
-  const subscription = tokenStatus.valid
+  const connected = tokenStatus.valid && tokenStatus.kind === "page";
+  const subscription = connected
     ? await readLeadgenSubscription()
     : { subscribed: false, fields: [] as string[], error: tokenStatus.error };
+  const adsInsights = connected ? await probeAdsRead() : { ok: false };
 
   return {
-    connected: Boolean(pageId && token),
+    connected,
     instant: true,
     webhookUrl: metaWebhookUrl(),
     verifyToken,
     autoSmsEnabled: false,
     token: tokenStatus,
     subscription,
+    adsInsights,
+    oauth: {
+      startUrl: metaOAuthStartPath(),
+      redirectUri: request ? metaOAuthRedirectUri(request) : PRODUCTION_OAUTH_REDIRECT_URI,
+      productionRedirectUri: PRODUCTION_OAUTH_REDIRECT_URI,
+      localhostRedirectUri: LOCAL_OAUTH_REDIRECT_URI,
+    },
     config: {
-      pageId: pageId || "",
+      pageId,
+      pageName: tokenStatus.pageName || config.pageName || "",
       adAccountId: await resolveMetaAdAccountId(),
       pageAccessTokenMasked: maskSecret(token),
       hasPageAccessToken: Boolean(token),
       hasUserAccessToken: Boolean(config.userAccessToken?.trim()),
-      hasAppSecret: Boolean(
-        process.env.META_APP_SECRET?.trim() || config.appSecret?.trim()
-      ),
+      hasAppSecret: Boolean(process.env.META_APP_SECRET?.trim() || config.appSecret?.trim()),
       lastSyncAt: config.lastSyncAt,
       lastSyncCount: config.lastSyncCount,
       lastWebhookAt: config.lastWebhookAt,
@@ -54,14 +70,14 @@ async function metaStatusPayload() {
   };
 }
 
-export async function GET() {
+export async function GET(request: Request) {
   try {
     await requireAdmin();
   } catch {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
-  return NextResponse.json(await metaStatusPayload());
+  return NextResponse.json(await metaStatusPayload(request));
 }
 
 export async function PATCH(request: Request) {
@@ -88,53 +104,34 @@ export async function PATCH(request: Request) {
 
     const incomingToken =
       typeof body.pageAccessToken === "string" ? body.pageAccessToken.trim() : "";
-    const pageId = (body.pageId || (await resolveMetaPageId()) || "").trim();
+    const pageId = (body.pageId || (await resolveMetaPageId()) || DEFAULT_META_PAGE_ID).trim();
+
+    if (Object.keys(patch).length > 1 || !incomingToken) {
+      await writeMetaRuntimeConfig(patch);
+    }
+
     if (incomingToken) {
-      if (!pageId) {
-        return NextResponse.json(
-          { error: "Facebook Page ID is required before saving a token" },
-          { status: 400 }
-        );
+      const resolved = await resolvePermanentPageToken(pageId, incomingToken);
+      await finalizeMetaConnection({
+        pageId,
+        pageToken: resolved.pageToken,
+        userToken: resolved.userToken,
+        pageName: resolved.pageName,
+      });
+    } else {
+      if (patch.adAccountId || patch.appSecret) {
+        await clearMetaInsightsCache();
       }
-      const upgraded = await ensureLongLivedPageToken(pageId, incomingToken);
-      patch.pageAccessToken = upgraded.token;
-      if (upgraded.userToken) patch.userAccessToken = upgraded.userToken;
-      patch.tokenExpiresAt = upgraded.status.expiresAt;
-      patch.lastError = null;
-    }
-
-    await writeMetaRuntimeConfig(patch);
-    if (incomingToken || patch.appSecret || patch.adAccountId) {
-      await clearMetaInsightsCache();
-    }
-
-    let subscription = null;
-    let sync = null;
-    try {
-      subscription = await subscribePageToLeadgen();
-    } catch (err) {
-      subscription = {
-        subscribed: false,
-        fields: [],
-        error: err instanceof Error ? err.message : "Subscribe failed",
-      };
-    }
-
-    if (incomingToken) {
       try {
-        sync = await syncExistingMetaLeads();
-      } catch (err) {
-        sync = {
-          error: err instanceof Error ? err.message : "Sync failed",
-        };
+        await subscribePageToLeadgen();
+      } catch {
+        // Status payload reports subscription.
       }
     }
 
     return NextResponse.json({
       ok: true,
-      ...(await metaStatusPayload()),
-      subscription,
-      sync,
+      ...(await metaStatusPayload(request)),
     });
   } catch (err) {
     return NextResponse.json(
@@ -152,6 +149,10 @@ export async function POST(request: Request) {
   }
 
   const body = (await request.json().catch(() => ({}))) as { action?: string };
+  if (body.action === "disconnect") {
+    await disconnectMetaConnection();
+    return NextResponse.json({ ok: true, ...(await metaStatusPayload(request)) });
+  }
   if (body.action === "subscribe") {
     try {
       const subscription = await subscribePageToLeadgen();

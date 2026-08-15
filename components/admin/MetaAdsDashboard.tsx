@@ -1,6 +1,9 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
+import MetaConnectionCard, {
+  type MetaConnectionStatus,
+} from "@/components/admin/MetaConnectionCard";
 import type { MetaInsightsPayload, MetaInsightsRangeDays } from "@/lib/meta/insights-types";
 
 function usd(value: number | null | undefined): string {
@@ -154,17 +157,24 @@ function TopAdVisual({ payload }: { payload: MetaInsightsPayload }) {
 export default function MetaAdsDashboard() {
   const [range, setRange] = useState<MetaInsightsRangeDays>(7);
   const [payload, setPayload] = useState<MetaInsightsPayload | null>(null);
+  const [connection, setConnection] = useState<MetaConnectionStatus | null>(null);
   const [loading, setLoading] = useState(true);
 
   const load = useCallback(async (days: MetaInsightsRangeDays) => {
     setLoading(true);
     try {
-      const res = await fetch(`/api/admin/meta/insights?range=${days}`);
-      if (res.status === 401) {
+      const [insightsRes, metaRes] = await Promise.all([
+        fetch(`/api/admin/meta/insights?range=${days}`),
+        fetch("/api/admin/meta"),
+      ]);
+      if (metaRes.ok) {
+        setConnection((await metaRes.json()) as MetaConnectionStatus);
+      }
+      if (insightsRes.status === 401) {
         setPayload(null);
         return;
       }
-      const data = (await res.json()) as MetaInsightsPayload;
+      const data = (await insightsRes.json()) as MetaInsightsPayload;
       setPayload(data);
     } catch {
       setPayload({
@@ -227,6 +237,10 @@ export default function MetaAdsDashboard() {
               </button>
             ))}
           </div>
+        </div>
+
+        <div className="mt-6">
+          <MetaConnectionCard status={connection} compact />
         </div>
 
         <p className="mt-4 text-sm font-medium text-gray-700">

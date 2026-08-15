@@ -7,23 +7,29 @@ import {
   resolveMetaPageId,
 } from "./config";
 
+export type MetaTokenKind = "page" | "user" | "expired" | "none" | "unknown";
+
 export type MetaTokenStatus = {
   valid: boolean;
+  kind: MetaTokenKind;
+  pageId: string | null;
+  pageName: string | null;
   expiresAt: string | null;
   neverExpires: boolean;
+  missingPagePerms?: boolean;
   error?: string;
   code?: number;
   errorSubcode?: number;
 };
 
-type DebugToken = {
-  data?: {
-    is_valid?: boolean;
-    type?: string;
-    expires_at?: number;
-    data_access_expires_at?: number;
-    error?: { message?: string; code?: number; error_subcode?: number };
-  };
+export const USER_TOKEN_PASTE_MESSAGE =
+  "This is not a Page token. Use Connect Meta, or generate a System User token assigned to the DermLounge Page.";
+
+type PageAccount = {
+  id?: string;
+  name?: string;
+  access_token?: string;
+  tasks?: string[];
 };
 
 function unixToIso(seconds?: number): string | null {
@@ -31,57 +37,191 @@ function unixToIso(seconds?: number): string | null {
   return new Date(seconds * 1000).toISOString();
 }
 
-/**
- * Live Page/me Graph calls decide validity. debug_token is metadata only —
- * a blocked app token or wrong app secret must not mark a working Page token expired.
- */
-export async function inspectMetaAccessToken(token?: string | null): Promise<MetaTokenStatus> {
-  const access = token || (await resolveMetaPageAccessToken());
-  if (!access) {
-    return { valid: false, expiresAt: null, neverExpires: false, error: "No Page access token" };
-  }
+export function isMissingPagePermsError(err: unknown): boolean {
+  if (!(err instanceof MetaGraphError)) return false;
+  const message = (err.message || "").toLowerCase();
+  return (
+    err.code === 190 &&
+    /pages_show_list|pages_manage_metadata|pages_read_engagement|pages_read_user_content|pages_manage_ads|pages_messaging|impersonating a user's page/.test(
+      message
+    )
+  );
+}
 
-  let expiresAt: string | null = null;
-  let neverExpires = false;
+export function isExpiredTokenError(err: unknown): boolean {
+  if (!(err instanceof MetaGraphError)) return false;
+  if (err.errorSubcode === 463 || err.errorSubcode === 467) return true;
+  const message = (err.message || "").toLowerCase();
+  return err.code === 190 && /session has expired|has expired|expired token|invalid oauth/.test(message);
+}
 
-  const appId = await resolveMetaAppId();
-  const appSecret = await resolveMetaAppSecret();
-  if (appId && appSecret) {
-    try {
-      const debug = await graphGetPublic<DebugToken>("debug_token", {
-        input_token: access,
-        access_token: `${appId}|${appSecret}`,
-      });
-      const data = debug.data;
-      expiresAt = unixToIso(data?.expires_at);
-      neverExpires = data?.expires_at === 0;
-    } catch {
-      // App token may be blocked (code 200 "API access blocked") even when the Page token works.
-    }
-  }
+function emptyStatus(error: string): MetaTokenStatus {
+  return {
+    valid: false,
+    kind: "none",
+    pageId: null,
+    pageName: null,
+    expiresAt: null,
+    neverExpires: false,
+    error,
+  };
+}
 
-  const pageId = await resolveMetaPageId();
+export async function probePageToken(
+  token: string,
+  pageId: string
+): Promise<MetaTokenStatus> {
   try {
-    await graphGet(pageId || "me", access, { fields: "id,name" });
-    return { valid: true, expiresAt, neverExpires };
+    const page = await graphGet<{ id?: string; name?: string }>(pageId, token, {
+      fields: "id,name",
+    });
+    return {
+      valid: true,
+      kind: "page",
+      pageId: page.id || pageId,
+      pageName: page.name || null,
+      expiresAt: null,
+      neverExpires: true,
+    };
   } catch (err) {
     const code = err instanceof MetaGraphError ? err.code : undefined;
     const errorSubcode = err instanceof MetaGraphError ? err.errorSubcode : undefined;
+    const missingPagePerms = isMissingPagePermsError(err);
+    const expired = isExpiredTokenError(err) || (code === 190 && !missingPagePerms);
     return {
       valid: false,
-      expiresAt,
+      kind: missingPagePerms ? "user" : expired ? "expired" : "unknown",
+      pageId,
+      pageName: null,
+      expiresAt: null,
       neverExpires: false,
-      error: err instanceof Error ? err.message : "Page access token is not valid",
+      missingPagePerms,
+      error: missingPagePerms
+        ? USER_TOKEN_PASTE_MESSAGE
+        : err instanceof Error
+          ? err.message
+          : "Page access token is not valid",
       code,
       errorSubcode,
     };
   }
 }
 
+export async function assertLeadgenForms(pageId: string, token: string): Promise<void> {
+  await graphGet(`${pageId}/leadgen_forms`, token, { fields: "id,name", limit: "1" });
+}
+
+async function exchangeUserToken(token: string): Promise<string> {
+  const appId = await resolveMetaAppId();
+  const appSecret = await resolveMetaAppSecret();
+  if (!appId || !appSecret) return token;
+  try {
+    const exchanged = await graphGetPublic<{ access_token?: string }>("oauth/access_token", {
+      grant_type: "fb_exchange_token",
+      client_id: appId,
+      client_secret: appSecret,
+      fb_exchange_token: token,
+    });
+    return exchanged.access_token || token;
+  } catch {
+    return token;
+  }
+}
+
+export async function resolvePageTokenFromUserToken(
+  userToken: string,
+  pageId: string
+): Promise<{
+  pageToken: string;
+  userToken: string;
+  pageName: string;
+  exchanged: boolean;
+} | null> {
+  const workingUser = await exchangeUserToken(userToken);
+  try {
+    const accounts = await graphGet<{ data?: PageAccount[] }>("me/accounts", workingUser, {
+      fields: "id,name,access_token,tasks",
+      limit: "100",
+    });
+    const match = (accounts.data ?? []).find((page) => page.id === pageId);
+    if (!match?.access_token) return null;
+    const probe = await probePageToken(match.access_token, pageId);
+    if (!probe.valid) return null;
+    await assertLeadgenForms(pageId, match.access_token);
+    return {
+      pageToken: match.access_token,
+      userToken: workingUser,
+      pageName: match.name || probe.pageName || "",
+      exchanged: true,
+    };
+  } catch {
+    return null;
+  }
+}
+
 /**
- * Turn a short-lived user/page token into a long-lived Page token when App ID + secret exist.
- * Page tokens from a long-lived user token typically do not expire.
+ * Live Page Graph calls decide validity. debug_token is never the health check —
+ * a blocked app token must not mark a working Page token expired.
  */
+export async function inspectMetaAccessToken(token?: string | null): Promise<MetaTokenStatus> {
+  const access = token || (await resolveMetaPageAccessToken());
+  if (!access) {
+    return emptyStatus("Not connected");
+  }
+
+  const pageId = await resolveMetaPageId();
+  if (!pageId) {
+    return emptyStatus("Facebook Page ID is not configured");
+  }
+
+  return probePageToken(access, pageId);
+}
+
+/**
+ * Accept a pasted System User token, or a user token that can be resolved to a
+ * Page token. Never persist a Graph Explorer / user token as the Page token.
+ */
+export async function resolvePermanentPageToken(
+  pageId: string,
+  rawToken: string
+): Promise<{
+  pageToken: string;
+  userToken?: string;
+  pageName: string;
+  exchanged: boolean;
+}> {
+  const token = rawToken.trim();
+  if (!token) {
+    throw new Error("Paste a System User token, or use Connect Meta");
+  }
+
+  const fromUser = await resolvePageTokenFromUserToken(token, pageId);
+  if (fromUser) return fromUser;
+
+  const probe = await probePageToken(token, pageId);
+  if (probe.missingPagePerms || probe.kind === "user") {
+    throw new Error(USER_TOKEN_PASTE_MESSAGE);
+  }
+  if (!probe.valid) {
+    throw new Error(probe.error || USER_TOKEN_PASTE_MESSAGE);
+  }
+
+  try {
+    await assertLeadgenForms(pageId, token);
+  } catch (err) {
+    if (isMissingPagePermsError(err) || (err instanceof MetaGraphError && err.code === 190)) {
+      throw new Error(USER_TOKEN_PASTE_MESSAGE);
+    }
+    throw err instanceof Error ? err : new Error(USER_TOKEN_PASTE_MESSAGE);
+  }
+
+  return {
+    pageToken: token,
+    pageName: probe.pageName || "",
+    exchanged: false,
+  };
+}
+
 export async function ensureLongLivedPageToken(
   pageId: string,
   rawToken: string
@@ -90,47 +230,18 @@ export async function ensureLongLivedPageToken(
   userToken?: string;
   exchanged: boolean;
   status: MetaTokenStatus;
+  pageName: string;
 }> {
-  const token = rawToken.trim();
-  const appId = await resolveMetaAppId();
-  const appSecret = await resolveMetaAppSecret();
-  let working = token;
-  let userToken: string | undefined;
-  let exchanged = false;
-
-  if (appId && appSecret) {
-    try {
-      const exchangedUser = await graphGetPublic<{ access_token?: string }>("oauth/access_token", {
-        grant_type: "fb_exchange_token",
-        client_id: appId,
-        client_secret: appSecret,
-        fb_exchange_token: token,
-      });
-      if (exchangedUser.access_token) {
-        working = exchangedUser.access_token;
-        exchanged = true;
-      }
-    } catch {
-      // Already a Page token, or exchange is unavailable — try it as-is.
-    }
-
-    try {
-      const page = await graphGet<{ access_token?: string }>(pageId, working, {
-        fields: "access_token",
-      });
-      if (page.access_token && page.access_token !== working) {
-        userToken = working;
-        working = page.access_token;
-        exchanged = true;
-      }
-    } catch {
-      // Keep the exchanged user token or original if this Page lookup fails.
-    }
-  }
-
-  const status = await inspectMetaAccessToken(working);
+  const resolved = await resolvePermanentPageToken(pageId, rawToken);
+  const status = await probePageToken(resolved.pageToken, pageId);
   if (!status.valid) {
-    throw new Error(status.error || "Meta Page access token is not valid");
+    throw new Error(status.error || USER_TOKEN_PASTE_MESSAGE);
   }
-  return { token: working, userToken, exchanged, status };
+  return {
+    token: resolved.pageToken,
+    userToken: resolved.userToken,
+    exchanged: resolved.exchanged,
+    status,
+    pageName: resolved.pageName,
+  };
 }

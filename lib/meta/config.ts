@@ -10,12 +10,17 @@ const REDIS_KEY = "dl:meta-config";
 
 export const META_GRAPH_VERSION = "v21.0";
 export const DEFAULT_META_VERIFY_TOKEN = "dermlounge-lead-webhook";
+/** MyDermLounge Facebook Page. */
+export const DEFAULT_META_PAGE_ID = "107183565822734";
 /** MyDermLounge Ads Manager account (act_593540209723240). */
 export const DEFAULT_META_AD_ACCOUNT_ID = "593540209723240";
 export const META_INSIGHTS_CACHE_TTL_SEC = 10 * 60;
+export const META_OAUTH_CALLBACK_PATH = "/api/admin/meta/oauth/callback";
+export const META_OAUTH_START_PATH = "/api/admin/meta/oauth";
 
 export interface MetaRuntimeConfig {
   pageId?: string;
+  pageName?: string;
   pageAccessToken?: string;
   /** Long-lived user token for Marketing API insights (`ads_read`). */
   userAccessToken?: string;
@@ -25,6 +30,8 @@ export interface MetaRuntimeConfig {
   appSecret?: string;
   /** When true, new Meta leads may receive an SMS. Keep false until the flow is approved. */
   autoSmsEnabled?: boolean;
+  /** When true, ignore env fallback tokens until Connect Meta runs again. */
+  disconnected?: boolean;
   lastSyncAt?: string;
   lastSyncCount?: number;
   lastWebhookAt?: string;
@@ -108,11 +115,12 @@ export async function resolveMetaPageId(): Promise<string | null> {
   const env = process.env.META_PAGE_ID?.trim();
   if (env) return env;
   const cfg = await readMetaRuntimeConfig();
-  return cfg.pageId?.trim() || null;
+  return cfg.pageId?.trim() || DEFAULT_META_PAGE_ID;
 }
 
 export async function resolveMetaPageAccessToken(): Promise<string | null> {
   const cfg = await readMetaRuntimeConfig();
+  if (cfg.disconnected) return null;
   const stored = cfg.pageAccessToken?.trim();
   if (stored) return stored;
   return process.env.META_PAGE_ACCESS_TOKEN?.trim() || null;
@@ -158,6 +166,7 @@ export function metaAdAccountPath(adAccountId: string): string {
 /** Prefer a user token with ads_read; fall back to the Page token used for leads. */
 export async function resolveMetaAdsAccessToken(): Promise<string | null> {
   const cfg = await readMetaRuntimeConfig();
+  if (cfg.disconnected) return null;
   const user = cfg.userAccessToken?.trim();
   if (user) return user;
   return resolveMetaPageAccessToken();

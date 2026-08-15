@@ -13,7 +13,7 @@ function AdsPerformanceLink() {
           <h2 className="text-xl font-bold text-brand">Ads performance</h2>
           <p className="mt-1 text-sm text-gray-600">
             Owner-facing Meta dashboard: CPC, CPL, CTR, spend, and the top ad creative.
-            Token paste stays on Meta Lead Ads below.
+            Connect Meta on this page. Ads numbers appear on the Meta Ads dashboard.
           </p>
         </div>
         <Link
