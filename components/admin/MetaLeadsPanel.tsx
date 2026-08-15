@@ -168,12 +168,16 @@ export default function MetaLeadsPanel() {
       )}
       {tokenError && !tokenValid && (
         <div className="rounded-xl border border-amber-200 bg-amber-50 text-amber-950 px-4 py-3 text-sm space-y-1">
-          <p className="font-semibold">Page access token is expired or invalid.</p>
+          <p className="font-semibold">
+            {/session has expired/i.test(tokenError || "")
+              ? "Meta expired this token session."
+              : "Meta rejected the stored Page token."}
+          </p>
           <p>{tokenError}</p>
           <p>
-            Paste a fresh Page token below and save. The app converts it to a
-            long-lived token and imports any Lead Center leads that were missed
-            overnight.
+            Paste a fresh Page token below and save. Saving exchanges it to a
+            long-lived Page token (when the app secret is set) and imports any
+            Lead Center leads that were missed overnight.
           </p>
         </div>
       )}

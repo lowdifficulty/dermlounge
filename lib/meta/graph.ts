@@ -1,7 +1,33 @@
 import "server-only";
 import { META_GRAPH_VERSION } from "./config";
 
-type GraphErrorBody = { error?: { message?: string; type?: string; code?: number } };
+type GraphErrorBody = {
+  error?: {
+    message?: string;
+    type?: string;
+    code?: number;
+    error_subcode?: number;
+  };
+};
+
+export class MetaGraphError extends Error {
+  readonly type?: string;
+  readonly code?: number;
+  readonly errorSubcode?: number;
+
+  constructor(err: { message?: string; type?: string; code?: number; error_subcode?: number }, status?: number) {
+    const message = err.message || `Meta Graph error ${status ?? ""}`.trim();
+    const suffix =
+      err.code != null
+        ? ` (code ${err.code}${err.error_subcode != null ? `/${err.error_subcode}` : ""})`
+        : "";
+    super(`${message}${suffix}`);
+    this.name = "MetaGraphError";
+    this.type = err.type;
+    this.code = err.code;
+    this.errorSubcode = err.error_subcode;
+  }
+}
 
 function graphUrl(path: string, search?: Record<string, string>): URL {
   const url = new URL(`https://graph.facebook.com/${META_GRAPH_VERSION}/${path.replace(/^\//, "")}`);
@@ -14,7 +40,7 @@ function graphUrl(path: string, search?: Record<string, string>): URL {
 async function readGraph<T>(res: Response): Promise<T> {
   const json = (await res.json()) as T & GraphErrorBody;
   if (!res.ok || json.error) {
-    throw new Error(json.error?.message || `Meta Graph error ${res.status}`);
+    throw new MetaGraphError(json.error || {}, res.status);
   }
   return json;
 }

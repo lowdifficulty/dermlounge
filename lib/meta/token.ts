@@ -1,5 +1,5 @@
 import "server-only";
-import { graphGet, graphGetPublic } from "./graph";
+import { graphGet, graphGetPublic, MetaGraphError } from "./graph";
 import {
   resolveMetaAppId,
   resolveMetaAppSecret,
@@ -12,13 +12,17 @@ export type MetaTokenStatus = {
   expiresAt: string | null;
   neverExpires: boolean;
   error?: string;
+  code?: number;
+  errorSubcode?: number;
 };
 
 type DebugToken = {
   data?: {
     is_valid?: boolean;
+    type?: string;
     expires_at?: number;
-    error?: { message?: string };
+    data_access_expires_at?: number;
+    error?: { message?: string; code?: number; error_subcode?: number };
   };
 };
 
@@ -27,11 +31,18 @@ function unixToIso(seconds?: number): string | null {
   return new Date(seconds * 1000).toISOString();
 }
 
+/**
+ * Live Page/me Graph calls decide validity. debug_token is metadata only —
+ * a blocked app token or wrong app secret must not mark a working Page token expired.
+ */
 export async function inspectMetaAccessToken(token?: string | null): Promise<MetaTokenStatus> {
   const access = token || (await resolveMetaPageAccessToken());
   if (!access) {
     return { valid: false, expiresAt: null, neverExpires: false, error: "No Page access token" };
   }
+
+  let expiresAt: string | null = null;
+  let neverExpires = false;
 
   const appId = await resolveMetaAppId();
   const appSecret = await resolveMetaAppSecret();
@@ -42,35 +53,27 @@ export async function inspectMetaAccessToken(token?: string | null): Promise<Met
         access_token: `${appId}|${appSecret}`,
       });
       const data = debug.data;
-      const expiresAt = unixToIso(data?.expires_at);
-      const neverExpires = data?.expires_at === 0;
-      const error = data?.error?.message;
-      return {
-        valid: Boolean(data?.is_valid),
-        expiresAt,
-        neverExpires,
-        error: data?.is_valid ? undefined : error || "Page access token is not valid",
-      };
-    } catch (err) {
-      return {
-        valid: false,
-        expiresAt: null,
-        neverExpires: false,
-        error: err instanceof Error ? err.message : "Could not inspect Meta token",
-      };
+      expiresAt = unixToIso(data?.expires_at);
+      neverExpires = data?.expires_at === 0;
+    } catch {
+      // App token may be blocked (code 200 "API access blocked") even when the Page token works.
     }
   }
 
   const pageId = await resolveMetaPageId();
   try {
     await graphGet(pageId || "me", access, { fields: "id,name" });
-    return { valid: true, expiresAt: null, neverExpires: false };
+    return { valid: true, expiresAt, neverExpires };
   } catch (err) {
+    const code = err instanceof MetaGraphError ? err.code : undefined;
+    const errorSubcode = err instanceof MetaGraphError ? err.errorSubcode : undefined;
     return {
       valid: false,
-      expiresAt: null,
+      expiresAt,
       neverExpires: false,
       error: err instanceof Error ? err.message : "Page access token is not valid",
+      code,
+      errorSubcode,
     };
   }
 }

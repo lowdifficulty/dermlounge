@@ -43,7 +43,7 @@ async function metaStatusPayload() {
       lastSyncCount: config.lastSyncCount,
       lastWebhookAt: config.lastWebhookAt,
       lastWebhookCount: config.lastWebhookCount,
-      lastError: config.lastError || tokenStatus.error || null,
+      lastError: tokenStatus.error || config.lastError || null,
       tokenExpiresAt: tokenStatus.expiresAt,
       updatedAt: config.updatedAt,
     },
@@ -72,11 +72,14 @@ export async function PATCH(request: Request) {
       pageAccessToken?: string;
     };
     const patch: Partial<MetaRuntimeConfig> = {
-      pageId: body.pageId,
-      verifyToken: body.verifyToken,
-      appSecret: body.appSecret,
       autoSmsEnabled: false,
     };
+    if (typeof body.pageId === "string") patch.pageId = body.pageId;
+    if (typeof body.verifyToken === "string") patch.verifyToken = body.verifyToken;
+    if (typeof body.appId === "string" && body.appId.trim()) patch.appId = body.appId.trim();
+    if (typeof body.appSecret === "string" && body.appSecret.trim()) {
+      patch.appSecret = body.appSecret.trim();
+    }
 
     const incomingToken =
       typeof body.pageAccessToken === "string" ? body.pageAccessToken.trim() : "";

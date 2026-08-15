@@ -15,6 +15,7 @@ export interface MetaRuntimeConfig {
   pageId?: string;
   pageAccessToken?: string;
   verifyToken?: string;
+  appId?: string;
   appSecret?: string;
   /** When true, new Meta leads may receive an SMS. Keep false until the flow is approved. */
   autoSmsEnabled?: boolean;
@@ -75,6 +76,7 @@ export async function writeMetaRuntimeConfig(
     next.pageAccessToken = next.pageAccessToken.trim();
   }
   if (typeof next.verifyToken === "string") next.verifyToken = next.verifyToken.trim();
+  if (typeof next.appId === "string") next.appId = next.appId.trim();
   if (typeof next.appSecret === "string") next.appSecret = next.appSecret.trim();
   next.autoSmsEnabled = false;
 
@@ -119,7 +121,10 @@ export async function resolveMetaAppSecret(): Promise<string | null> {
 }
 
 export async function resolveMetaAppId(): Promise<string | null> {
-  return process.env.META_APP_ID?.trim() || null;
+  const env = process.env.META_APP_ID?.trim();
+  if (env) return env;
+  const cfg = await readMetaRuntimeConfig();
+  return cfg.appId?.trim() || null;
 }
 
 export async function isMetaAutoSmsEnabled(): Promise<boolean> {
