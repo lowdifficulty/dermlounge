@@ -150,7 +150,7 @@ export default function MetaConnectionCard({
             />
             <Row
               ok={Boolean(status?.config.lastSyncAt)}
-              label="Last lead sync"
+              label="Last lead pull (every 5 min)"
               value={
                 status?.config.lastSyncAt
                   ? `${when(status.config.lastSyncAt)} (${status.config.lastSyncCount ?? 0} lead${

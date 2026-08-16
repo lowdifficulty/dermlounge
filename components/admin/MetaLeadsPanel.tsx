@@ -164,7 +164,8 @@ export default function MetaLeadsPanel() {
         <h2 className="text-xl font-bold text-brand">Meta Lead Ads</h2>
         <p className="text-sm text-gray-600 mt-1">
           Click <strong>Connect Meta</strong> once. Instant Form leads land in CRM as{" "}
-          <strong>Wound Care</strong> contacts. Automatic SMS stays off.
+          <strong>Wound Care</strong> contacts. Existing Lead Center leads auto-pull every 5
+          minutes. Automatic SMS stays off.
         </p>
       </div>
 
@@ -193,7 +194,7 @@ export default function MetaLeadsPanel() {
           disabled={syncing || !status?.connected}
           className="px-4 py-2 rounded-lg text-sm font-semibold border border-gray-200 disabled:opacity-50"
         >
-          {syncing ? "Pulling…" : "Pull existing Lead Center leads"}
+          {syncing ? "Pulling…" : "Pull now"}
         </button>
       </div>
 

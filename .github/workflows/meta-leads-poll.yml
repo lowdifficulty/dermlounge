@@ -1,0 +1,35 @@
+# Every 5 minutes: pull existing Meta Lead Center leads into CRM.
+# Hobby Vercel Cron cannot run this often; this Action is the reliable path.
+# Set GitHub Actions secret CRON_SECRET to the same value as Vercel CRON_SECRET.
+name: Meta Lead Center poll
+
+on:
+  schedule:
+    - cron: "*/5 * * * *"
+  workflow_dispatch:
+
+concurrency:
+  group: meta-leads-poll
+  cancel-in-progress: false
+
+jobs:
+  poll:
+    runs-on: ubuntu-latest
+    timeout-minutes: 3
+    steps:
+      - name: Pull existing Lead Center leads
+        env:
+          CRON_SECRET: ${{ secrets.CRON_SECRET }}
+          META_CRON_SECRET: ${{ secrets.META_CRON_SECRET }}
+        run: |
+          SECRET="${CRON_SECRET:-$META_CRON_SECRET}"
+          if [ -z "$SECRET" ]; then
+            echo "Missing GitHub Actions secret CRON_SECRET."
+            echo "GitHub repo → Settings → Secrets and variables → Actions → CRON_SECRET"
+            echo "Use the same value as Vercel CRON_SECRET."
+            exit 1
+          fi
+          curl -fsS -X POST \
+            -H "Authorization: Bearer ${SECRET}" \
+            -H "Accept: application/json" \
+            "https://mydermlounge.com/api/cron/meta-leads/"

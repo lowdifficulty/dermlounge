@@ -1,18 +1,22 @@
 import { NextResponse } from "next/server";
 import { resolveMetaPageAccessToken, resolveMetaPageId } from "@/lib/meta/config";
-import { syncRecentMetaLeads } from "@/lib/meta/leads";
+import { syncExistingMetaLeads } from "@/lib/meta/leads";
 import { subscribePageToLeadgen } from "@/lib/meta/subscribe";
 
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
 export const maxDuration = 60;
 
+function cronSecrets(): string[] {
+  return [process.env.CRON_SECRET, process.env.META_CRON_SECRET]
+    .map((value) => value?.trim())
+    .filter((value): value is string => Boolean(value));
+}
+
 function isAuthorizedCron(request: Request): boolean {
   if (request.headers.get("x-vercel-cron") === "1") return true;
-  const secret = process.env.CRON_SECRET?.trim();
-  if (!secret) return false;
   const auth = request.headers.get("authorization") || "";
-  return auth === `Bearer ${secret}`;
+  return cronSecrets().some((secret) => auth === `Bearer ${secret}`);
 }
 
 async function runCron(request: Request) {
@@ -37,7 +41,7 @@ async function runCron(request: Request) {
   }
 
   try {
-    const result = await syncRecentMetaLeads(72);
+    const result = await syncExistingMetaLeads();
     return NextResponse.json({ ok: true, source: "cron", ...result });
   } catch (err) {
     const message = err instanceof Error ? err.message : "Meta cron sync failed";
