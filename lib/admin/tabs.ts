@@ -2,6 +2,7 @@ export const ADMIN_TABS = [
   "crm",
   "contacts",
   "opportunities",
+  "consultations",
   "people",
   "phoneSms",
   "metaAds",

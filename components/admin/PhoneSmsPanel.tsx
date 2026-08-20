@@ -4,6 +4,8 @@ import Link from "next/link";
 import TwilioSettingsPanel from "@/components/admin/TwilioSettingsPanel";
 import SmsBotPanel from "@/components/crm/SmsBotPanel";
 import MetaLeadsPanel from "@/components/admin/MetaLeadsPanel";
+import MetaDmPanel from "@/components/admin/MetaDmPanel";
+import MetaBotPanel from "@/components/crm/MetaBotPanel";
 
 function AdsPerformanceLink() {
   return (
@@ -34,6 +36,8 @@ export default function PhoneSmsPanel() {
       <TwilioSettingsPanel />
       <AdsPerformanceLink />
       <MetaLeadsPanel />
+      <MetaDmPanel />
+      <MetaBotPanel />
       <SmsBotPanel />
     </div>
   );

@@ -13,5 +13,10 @@ export function isConversationVisibleInteraction(ix: CrmInteraction): boolean {
     return Boolean(ix.twilioSid?.trim());
   }
 
+  if (ix.channel === "meta" && ix.direction === "outbound") {
+    if (ix.actor === "bot") return true;
+    return Boolean(ix.metadata?.metaMessageId);
+  }
+
   return true;
 }

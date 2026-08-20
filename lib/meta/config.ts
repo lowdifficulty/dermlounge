@@ -38,6 +38,9 @@ export interface MetaRuntimeConfig {
   lastWebhookCount?: number;
   lastError?: string | null;
   tokenExpiresAt?: string | null;
+  /** Last Meta DM history import. */
+  backfilledAt?: string;
+  instagramAccountId?: string;
   updatedAt?: string;
 }
 
@@ -181,6 +184,40 @@ export async function isMetaAutoSmsEnabled(): Promise<boolean> {
 
 export function metaWebhookUrl(base = companyLegal.siteUrl): string {
   return `${base.replace(/\/$/, "")}/api/meta/leads/`;
+}
+
+export function metaDmWebhookUrl(base = companyLegal.siteUrl): string {
+  return `${base.replace(/\/$/, "")}/api/meta/messages/`;
+}
+
+export function metaGraphVersion(): string {
+  return META_GRAPH_VERSION;
+}
+
+export async function metaMessagingStatus(): Promise<{
+  configured: boolean;
+  hasPageToken: boolean;
+  hasPageId: boolean;
+  hasAppSecret: boolean;
+  hasVerifyToken: boolean;
+  hasInstagram: boolean;
+}> {
+  const token = await resolveMetaPageAccessToken();
+  const pageId = await resolveMetaPageId();
+  const appSecret = await resolveMetaAppSecret();
+  const verifyToken = await resolveMetaVerifyToken();
+  const cfg = await readMetaRuntimeConfig();
+  const instagram =
+    process.env.META_INSTAGRAM_ACCOUNT_ID?.trim() || cfg.instagramAccountId?.trim() || null;
+
+  return {
+    configured: Boolean(token && pageId),
+    hasPageToken: Boolean(token),
+    hasPageId: Boolean(pageId),
+    hasAppSecret: Boolean(appSecret),
+    hasVerifyToken: Boolean(verifyToken),
+    hasInstagram: Boolean(instagram),
+  };
 }
 
 export function maskSecret(value?: string | null): string {

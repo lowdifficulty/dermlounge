@@ -2,6 +2,7 @@ node_modules/
 .next/
 .vercel/
 .env.local
+.env.production.pull
 .local-server.log
 .local-server.pid
 home.html

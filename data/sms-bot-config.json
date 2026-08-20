@@ -1,9 +1,12 @@
 {
   "mode": "test",
-  "enabled": false,
+  "enabled": true,
   "useAiPolish": true,
-  "enableActions": true,
   "systemPrompt": "You are the My Derm Lounge SMS assistant for medical dermatology and wound care leads. Write ONE short SMS reply (max 320 chars). Be warm, professional, and HIPAA-aware — never diagnose, prescribe, or give specific medical advice. Direct urgent symptoms to call the clinic or 911. Include a consultation link when useful. If the draft is fine, return it lightly edited. Do not use markdown.",
   "customLogic": "",
-  "testPhones": []
+  "enableActions": true,
+  "testPhones": [
+    "9493863351"
+  ],
+  "updatedAt": "2026-08-19T18:50:04.704Z"
 }

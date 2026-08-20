@@ -54,11 +54,13 @@ type CrmContact = {
   updatedAt: string;
   medicalService?: string;
   primaryMedicalService?: MedicalServiceId;
+  metaPsid?: string;
+  metaPlatform?: string;
 };
 
 type CrmInteraction = {
   id: string;
-  channel: "sms" | "call" | "note" | "email" | "system";
+  channel: "sms" | "call" | "note" | "email" | "system" | "meta";
   direction: "inbound" | "outbound" | "internal";
   body?: string;
   summary?: string;
@@ -167,6 +169,7 @@ export default function CrmPanel() {
   const [unreadOnly, setUnreadOnly] = useState(false);
   const [listReady, setListReady] = useState(false);
   const [message, setMessage] = useState("");
+  const [composeChannel, setComposeChannel] = useState<"sms" | "meta">("sms");
   const [note, setNote] = useState("");
   const { staffPhone, setStaffPhone } = useStaffCallbackPhone();
   const { openDialer } = useStaffDialerPanel();
@@ -319,6 +322,7 @@ export default function CrmPanel() {
     return (detail?.interactions || []).filter(
       (ix) =>
         ix.channel === "sms" ||
+        ix.channel === "meta" ||
         ix.channel === "call" ||
         ix.channel === "note" ||
         (ix.channel === "system" && ix.body)
@@ -367,6 +371,30 @@ export default function CrmPanel() {
       await loadContacts();
     } catch (e) {
       setError(e instanceof Error ? e.message : "SMS failed");
+    } finally {
+      setBusy(null);
+    }
+  }
+
+  async function sendMetaDm() {
+    if (!selectedId) return;
+    setBusy("sms");
+    setError(null);
+    setBanner(null);
+    try {
+      const res = await fetch(`/api/admin/crm/contacts/${selectedId}/meta-messages`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ body: message }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || "Meta DM failed");
+      setMessage("");
+      setBanner("Meta DM sent");
+      await loadDetail(selectedId);
+      await loadContacts();
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Meta DM failed");
     } finally {
       setBusy(null);
     }
@@ -691,18 +719,40 @@ export default function CrmPanel() {
               </div>
 
               <div className="bg-white border-t border-gray-200 p-3 space-y-2 shrink-0">
+                {selected?.metaPsid && (
+                  <div className="flex gap-1">
+                    {(["sms", "meta"] as const).map((ch) => (
+                      <button
+                        key={ch}
+                        type="button"
+                        onClick={() => setComposeChannel(ch)}
+                        className={`px-3 py-1 rounded-md text-xs font-semibold ${
+                          composeChannel === ch
+                            ? "bg-brand text-white"
+                            : "bg-gray-100 text-gray-600"
+                        }`}
+                      >
+                        {ch === "sms" ? "SMS" : "Meta DM"}
+                      </button>
+                    ))}
+                  </div>
+                )}
                 <textarea
                   value={message}
                   onChange={(e) => setMessage(e.target.value)}
                   rows={2}
-                  placeholder="Write an SMS…"
+                  placeholder={
+                    composeChannel === "meta" ? "Write a Meta DM…" : "Write an SMS…"
+                  }
                   className="w-full border border-gray-200 rounded-xl px-3 py-2 text-sm resize-none"
                 />
                 <div className="flex flex-col sm:flex-row sm:flex-wrap gap-2 sm:items-center">
                   <div className="flex flex-wrap gap-2">
                     <button
                       type="button"
-                      onClick={() => void sendSms()}
+                      onClick={() =>
+                        void (composeChannel === "meta" ? sendMetaDm() : sendSms())
+                      }
                       disabled={busy === "sms" || !message.trim()}
                       className="px-4 py-2 rounded-lg text-sm font-semibold bg-brand text-white disabled:opacity-50"
                     >

@@ -1,7 +1,10 @@
 import "server-only";
 import { readSchedulingData } from "@/lib/scheduling/store";
+import { readWoundCareConsultations } from "@/lib/wound-care/store";
 import { twilioStatus } from "@/lib/notifications/twilio-client";
 import { isSmsBotEnabled } from "./sms-bot";
+import { metaMessagingStatus } from "@/lib/meta/config";
+import { isMetaBotEnabled } from "@/lib/meta/bot";
 import {
   ensureCrmSeeded,
   refreshCrmContactsPreservingLiveInteractions,
@@ -250,6 +253,9 @@ export async function listCrmContacts(filter: CrmListFilter = {}): Promise<{
   platform: Awaited<ReturnType<typeof twilioStatus>> & {
     smsBotEnabled: boolean;
     smsBotMode?: string;
+    metaConfigured: boolean;
+    metaBotEnabled: boolean;
+    metaBotMode?: string;
     crmStorage: ReturnType<typeof getPersistenceMode>;
   };
 }> {
@@ -305,11 +311,15 @@ export async function listCrmContacts(filter: CrmListFilter = {}): Promise<{
   for (const contact of all) {
     byStage[normalizeCrmContactStatus(contact.status)] += 1;
   }
-  const [platform, botEnabled, botConfig] = await Promise.all([
-    twilioStatus(),
-    isSmsBotEnabled(),
-    import("./sms-bot-config").then((m) => m.readSmsBotConfig()).catch(() => null),
-  ]);
+  const [platform, botEnabled, botConfig, metaStatus, metaBotEnabled, metaBotConfig] =
+    await Promise.all([
+      twilioStatus(),
+      isSmsBotEnabled(),
+      import("./sms-bot-config").then((m) => m.readSmsBotConfig()).catch(() => null),
+      metaMessagingStatus(),
+      isMetaBotEnabled(),
+      import("@/lib/meta/meta-bot-config").then((m) => m.readMetaBotConfig()).catch(() => null),
+    ]);
   return {
     contacts,
     stats: {
@@ -321,6 +331,9 @@ export async function listCrmContacts(filter: CrmListFilter = {}): Promise<{
       ...platform,
       smsBotEnabled: botConfig?.enabled ?? botEnabled,
       smsBotMode: botConfig?.mode,
+      metaConfigured: metaStatus.configured,
+      metaBotEnabled: metaBotConfig?.enabled ?? metaBotEnabled,
+      metaBotMode: metaBotConfig?.mode,
       crmStorage: getPersistenceMode(),
     },
   };
@@ -335,11 +348,18 @@ export async function getCrmContactDetail(
   if (!contact) return null;
 
   const { appointments } = await readSchedulingData();
+  const woundConsultations = await readWoundCareConsultations();
   const now = Date.now();
   const mine = appointments.filter(
     (a) =>
       contact.appointmentIds.includes(a.id) ||
       a.phone.replace(/\D/g, "").endsWith(contact.phone)
+  );
+
+  const woundMine = woundConsultations.filter(
+    (c) =>
+      contact.appointmentIds.includes(c.id) ||
+      c.phone.replace(/\D/g, "").endsWith(contact.phone)
   );
 
   const interactions = await listInteractionsForContact(contactId);
@@ -351,7 +371,20 @@ export async function getCrmContactDetail(
     service: a.service,
     petName: a.petName,
     groomerId: a.groomerId,
+    kind: "appointment" as const,
   }));
+
+  const woundMapped = woundMine.map((c) => ({
+    id: c.id,
+    startAt: c.startAt,
+    status: c.status,
+    service: "Wound care consultation",
+    petName: "",
+    groomerId: "",
+    kind: "wound_consultation" as const,
+  }));
+
+  const allMapped = [...mapped, ...woundMapped];
 
   await markContactRead(contactId);
   const refreshed = (await findContactById(contactId)) ?? contact;
@@ -360,10 +393,10 @@ export async function getCrmContactDetail(
     ...refreshed,
     fullName: displayNameFromContact(refreshed),
     interactions,
-    upcomingAppointments: mapped
+    upcomingAppointments: allMapped
       .filter((a) => a.status === "confirmed" && new Date(a.startAt).getTime() >= now)
       .sort((a, b) => a.startAt.localeCompare(b.startAt)),
-    pastAppointments: mapped
+    pastAppointments: allMapped
       .filter((a) => new Date(a.startAt).getTime() < now)
       .sort((a, b) => b.startAt.localeCompare(a.startAt)),
   };

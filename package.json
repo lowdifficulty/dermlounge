@@ -15,6 +15,7 @@
     "bundle-css": "node scripts/bundle-css.mjs",
     "download-assets": "node scripts/download-assets.mjs",
     "seed-crm": "node scripts/seed-crm.mjs",
+    "backfill-meta": "node scripts/backfill-meta-conversations.mjs",
     "prebuild": "node -e \"const{existsSync}=require('fs');const{execSync}=require('child_process');if(existsSync('mirror/html')){execSync('node scripts/process-html.mjs',{stdio:'inherit'});execSync('node scripts/bundle-css.mjs',{stdio:'inherit'})}\""
   },
   "dependencies": {

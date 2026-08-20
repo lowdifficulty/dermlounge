@@ -115,6 +115,13 @@ export async function findContactByPhone(phone: string): Promise<CrmContact | nu
   return data.contacts.find((c) => c.phone === digits) ?? null;
 }
 
+export async function findContactByMetaPsid(psid: string): Promise<CrmContact | null> {
+  const needle = psid.trim();
+  if (!needle) return null;
+  const data = await readCrmData();
+  return data.contacts.find((c) => c.metaPsid === needle) ?? null;
+}
+
 export async function findContactById(id: string): Promise<CrmContact | null> {
   const data = await readCrmData();
   return data.contacts.find((c) => c.id === id) ?? null;
@@ -149,7 +156,11 @@ export async function appendInteraction(interaction: CrmInteraction): Promise<Cr
     contact.updatedAt = interaction.createdAt;
     if (interaction.direction === "inbound") {
       contact.lastInboundAt = interaction.createdAt;
-      if (interaction.channel === "sms" || interaction.channel === "call") {
+      if (
+        interaction.channel === "sms" ||
+        interaction.channel === "call" ||
+        interaction.channel === "meta"
+      ) {
         contact.unreadCount = (contact.unreadCount ?? 0) + 1;
       }
     }

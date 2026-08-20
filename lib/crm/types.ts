@@ -24,7 +24,9 @@ export type CrmContactSource =
   | "heyflow"
   | "manual";
 
-export type CrmInteractionChannel = "sms" | "call" | "note" | "email" | "system";
+export type CrmInteractionChannel = "sms" | "call" | "note" | "email" | "system" | "meta";
+
+export type MetaPlatform = "facebook" | "instagram";
 
 export type CrmInteractionDirection = "inbound" | "outbound" | "internal";
 
@@ -88,6 +90,10 @@ export interface CrmContact {
   updatedAt: string;
   /** Multi-turn SMS bot state (book / cancel / reschedule). */
   smsBotSession?: SmsBotSession | null;
+  /** Meta Messenger / Instagram PSID when linked. */
+  metaPsid?: string;
+  metaPlatform?: MetaPlatform;
+  metaUsername?: string;
 }
 
 export type SmsBotSessionFlow =
