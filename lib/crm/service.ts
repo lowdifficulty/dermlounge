@@ -1,4 +1,5 @@
 import "server-only";
+import { deleteLeadById } from "@/lib/leads/store";
 import { readSchedulingData } from "@/lib/scheduling/store";
 import { readWoundCareConsultations } from "@/lib/wound-care/store";
 import { twilioStatus } from "@/lib/notifications/twilio-client";
@@ -10,7 +11,9 @@ import {
   refreshCrmContactsPreservingLiveInteractions,
 } from "./seed";
 import { getPersistenceMode } from "@/lib/scheduling/persistence";
+import { dedupeAllContacts, dedupeLeads } from "./dedupe";
 import {
+  deleteContactById,
   findContactById,
   findContactByPhone,
   invalidateCrmReadCache,
@@ -260,6 +263,8 @@ export async function listCrmContacts(filter: CrmListFilter = {}): Promise<{
   };
 }> {
   await ensureCrmSeeded();
+  await dedupeAllContacts();
+  await dedupeLeads();
   const data = await readCrmData();
   const { appointments } = await readSchedulingData();
   const q = filter.q?.trim().toLowerCase();
@@ -549,4 +554,15 @@ export async function createManualContact(input: {
   };
 
   return { contact: await upsertContact(contact), created: true };
+}
+
+export async function deleteCrmContact(contactId: string): Promise<CrmContact | null> {
+  const contact = await findContactById(contactId);
+  if (!contact) return null;
+
+  if (contact.leadId) {
+    await deleteLeadById(contact.leadId);
+  }
+
+  return deleteContactById(contactId);
 }

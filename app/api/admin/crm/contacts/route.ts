@@ -71,6 +71,12 @@ export async function POST(request: Request) {
       const result = await refreshCrm();
       return NextResponse.json({ ok: true, ...result });
     }
+    if (body.action === "dedupe") {
+      const { dedupeAllContacts, dedupeLeads } = await import("@/lib/crm/dedupe");
+      const contacts = await dedupeAllContacts();
+      const leads = await dedupeLeads();
+      return NextResponse.json({ ok: true, contacts, leads });
+    }
     if (body.action === "create") {
       const result = await createManualContact({
         phone: body.phone || "",

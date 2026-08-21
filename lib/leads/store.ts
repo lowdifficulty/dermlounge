@@ -82,6 +82,17 @@ export async function writeLeadsData(data: LeadsData): Promise<void> {
   invalidateLeadsReadCache();
 }
 
+function normalizeLeadName(value?: string): string {
+  return (value || "").trim().toLowerCase().replace(/\s+/g, " ");
+}
+
+function leadNameFromInput(input: LeadUpsertInput): string {
+  return (
+    normalizeLeadName(input.fullName) ||
+    normalizeLeadName([input.firstName, input.lastName].filter(Boolean).join(" "))
+  );
+}
+
 function findLeadIndex(data: LeadsData, input: LeadUpsertInput): number {
   const phone = input.phone ? normalizePhone(input.phone) : "";
   if (phone.length >= 10) {
@@ -100,7 +111,19 @@ function findLeadIndex(data: LeadsData, input: LeadUpsertInput): number {
   }
 
   if (input.leadSessionId) {
-    return data.leads.findIndex((l) => l.leadSessionId === input.leadSessionId);
+    const bySession = data.leads.findIndex((l) => l.leadSessionId === input.leadSessionId);
+    if (bySession >= 0) return bySession;
+  }
+
+  const name = leadNameFromInput(input);
+  if (name && input.source === "meta") {
+    const byName = data.leads.findIndex((l) => {
+      const existing =
+        normalizeLeadName(l.fullName) ||
+        normalizeLeadName([l.firstName, l.lastName].filter(Boolean).join(" "));
+      return existing === name;
+    });
+    if (byName >= 0) return byName;
   }
 
   if (input.appointmentId) {

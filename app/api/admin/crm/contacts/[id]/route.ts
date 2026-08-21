@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
-import { requireStaff } from "@/lib/scheduling/auth";
-import { getCrmContactDetail, updateContactBot, updateContactProfile } from "@/lib/crm/service";
+import { requireAdmin, requireStaff } from "@/lib/scheduling/auth";
+import { deleteCrmContact, getCrmContactDetail, updateContactBot, updateContactProfile } from "@/lib/crm/service";
 import type { CrmContactStatus } from "@/lib/crm/types";
 
 type Params = { params: Promise<{ id: string }> };
@@ -51,5 +51,19 @@ export async function PATCH(request: Request, { params }: Params) {
     const message = err instanceof Error ? err.message : "Unauthorized";
     const status = message === "Unauthorized" ? 401 : 400;
     return NextResponse.json({ error: message }, { status });
+  }
+}
+
+export async function DELETE(_request: Request, { params }: Params) {
+  try {
+    await requireAdmin();
+    const { id } = await params;
+    const removed = await deleteCrmContact(id);
+    if (!removed) {
+      return NextResponse.json({ error: "Not found" }, { status: 404 });
+    }
+    return NextResponse.json({ ok: true });
+  } catch {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 }

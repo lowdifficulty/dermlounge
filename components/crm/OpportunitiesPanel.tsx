@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { formatPhoneDisplay } from "@/lib/leads/normalize";
+import { isMetaOnlyPhone, metaContactLabel } from "@/lib/crm/meta-contact";
 import type { CrmContactListItem, CrmContactStatus } from "@/lib/crm/types";
 import {
   CRM_PIPELINE_STAGE_OPTIONS,
@@ -21,11 +22,21 @@ const COLUMN_ACCENT: Record<CrmContactStatus, string> = {
 };
 
 function displayName(contact: CrmContactListItem): string {
-  return (
+  const named =
     contact.fullName?.trim() ||
-    [contact.firstName, contact.lastName].filter(Boolean).join(" ").trim() ||
-    formatPhoneDisplay(contact.phone)
-  );
+    [contact.firstName, contact.lastName].filter(Boolean).join(" ").trim();
+  if (named) return named;
+  if (isMetaOnlyPhone(contact.phone) && contact.metaPsid) {
+    return metaContactLabel(contact.metaPlatform, true);
+  }
+  return formatPhoneDisplay(contact.phone);
+}
+
+function phoneSubtitle(contact: CrmContactListItem): string | null {
+  if (isMetaOnlyPhone(contact.phone)) {
+    return contact.metaPsid ? metaContactLabel(contact.metaPlatform, true) : null;
+  }
+  return formatPhoneDisplay(contact.phone);
 }
 
 function serviceLabel(contact: CrmContactListItem): string {
@@ -115,6 +126,33 @@ export default function OpportunitiesPanel({
     } catch (e) {
       setContacts(previous);
       setError(e instanceof Error ? e.message : "Could not move contact");
+    } finally {
+      setBusyId(null);
+    }
+  }
+
+  async function deleteContact(contactId: string) {
+    const contact = contacts.find((c) => c.id === contactId);
+    const label = contact ? displayName(contact) : "this opportunity";
+    if (
+      !window.confirm(
+        `Delete ${label} permanently? Their conversation history and linked lead record will be removed.`
+      )
+    ) {
+      return;
+    }
+
+    const previous = contacts;
+    setContacts((prev) => prev.filter((c) => c.id !== contactId));
+    setBusyId(contactId);
+    setError(null);
+    try {
+      const res = await fetch(`/api/admin/crm/contacts/${contactId}`, { method: "DELETE" });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || "Could not delete opportunity");
+    } catch (e) {
+      setContacts(previous);
+      setError(e instanceof Error ? e.message : "Could not delete opportunity");
     } finally {
       setBusyId(null);
     }
@@ -219,9 +257,11 @@ export default function OpportunitiesPanel({
                         <div className="font-semibold text-sm text-gray-900 truncate">
                           {displayName(contact)}
                         </div>
-                        <div className="text-xs text-gray-500 mt-0.5 truncate">
-                          {formatPhoneDisplay(contact.phone)}
-                        </div>
+                        {phoneSubtitle(contact) ? (
+                          <div className="text-xs text-gray-500 mt-0.5 truncate">
+                            {phoneSubtitle(contact)}
+                          </div>
+                        ) : null}
                         <div className="text-[11px] text-gray-400 mt-1 truncate">
                           {serviceLabel(contact)}
                           {contact.hasUpcomingAppointment ? " · Upcoming appt" : ""}
@@ -246,6 +286,17 @@ export default function OpportunitiesPanel({
                           </option>
                         ))}
                       </select>
+                      <button
+                        type="button"
+                        disabled={busyId === contact.id}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          void deleteContact(contact.id);
+                        }}
+                        className="mt-2 w-full px-2 py-1 text-[11px] font-semibold rounded-md border border-red-200 bg-white text-red-700 hover:bg-red-50 disabled:opacity-50"
+                      >
+                        Delete
+                      </button>
                     </article>
                   ))}
                 </div>

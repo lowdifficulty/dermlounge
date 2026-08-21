@@ -205,6 +205,17 @@ export async function setContactBotEnabled(
   return patchContact(contactId, { botEnabled });
 }
 
+export async function deleteContactById(contactId: string): Promise<CrmContact | null> {
+  const data = await readCrmData();
+  const idx = data.contacts.findIndex((c) => c.id === contactId);
+  if (idx < 0) return null;
+
+  const [removed] = data.contacts.splice(idx, 1);
+  data.interactions = data.interactions.filter((i) => i.contactId !== contactId);
+  await writeCrmData(data);
+  return removed;
+}
+
 export async function patchContact(
   contactId: string,
   patch: Partial<CrmContact>

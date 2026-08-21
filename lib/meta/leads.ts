@@ -1,7 +1,10 @@
 import "server-only";
+import { dedupeAllContacts } from "@/lib/crm/dedupe";
 import { upsertLead, addLeadNote, readLeadsData } from "@/lib/leads/store";
 import { DEFAULT_MEDICAL_SERVICE, getMedicalService } from "@/lib/medical-services";
 import { crmPhoneDigits, crmPhoneE164, displayNameFromContact } from "@/lib/crm/phone";
+import { findContactByEmail, findContactByName } from "@/lib/crm/contact-match";
+import { isMetaOnlyPhone } from "@/lib/crm/meta-contact";
 import {
   findContactByPhone,
   newContactId,
@@ -239,17 +242,35 @@ export async function ingestGraphLead(lead: GraphLead): Promise<IngestResult> {
   }
 
   const now = saved.createdAt || new Date().toISOString();
-  const existingContact = await findContactByPhone(digits);
+  let existingContact =
+    digits.length >= 10 ? await findContactByPhone(digits) : null;
+  if (!existingContact && parsed.email) {
+    existingContact = await findContactByEmail(parsed.email);
+  }
+  if (!existingContact) {
+    const nameNeedle = parsed.fullName || [parsed.firstName, parsed.lastName].filter(Boolean).join(" ");
+    existingContact = await findContactByName(nameNeedle);
+  }
+
+  const upgradingMetaOnly =
+    existingContact &&
+    isMetaOnlyPhone(existingContact.phone) &&
+    digits.length >= 10;
+
   const contact: CrmContact = existingContact
     ? {
         ...existingContact,
+        phone: upgradingMetaOnly ? digits : existingContact.phone,
+        phoneE164: upgradingMetaOnly
+          ? crmPhoneE164(parsed.phone || digits) ?? `+1${digits}`
+          : existingContact.phoneE164,
         firstName: parsed.firstName || existingContact.firstName,
         lastName: parsed.lastName || existingContact.lastName,
         fullName: displayNameFromContact({
           firstName: parsed.firstName || existingContact.firstName,
           lastName: parsed.lastName || existingContact.lastName,
           fullName: parsed.fullName || existingContact.fullName,
-          phone: digits,
+          phone: upgradingMetaOnly ? digits : existingContact.phone,
         }),
         email: parsed.email || existingContact.email,
         city: parsed.city || existingContact.city,
@@ -368,6 +389,8 @@ export async function syncExistingMetaLeads(options?: { since?: Date }): Promise
     lastSyncCount: graphLeads.length,
     lastError: errors[0] || null,
   });
+
+  await dedupeAllContacts();
 
   return { fetched: graphLeads.length, created, updated, skipped, errors };
 }
