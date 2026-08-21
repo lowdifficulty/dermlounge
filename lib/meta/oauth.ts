@@ -16,6 +16,7 @@ export const META_OAUTH_SCOPES = [
   "pages_show_list",
   "pages_manage_metadata",
   "pages_read_engagement",
+  "pages_messaging",
   "leads_retrieval",
   "ads_read",
   "business_management",
@@ -52,16 +53,39 @@ export function isLocalMetaHost(host: string): boolean {
   return hostname === "localhost" || hostname === "127.0.0.1";
 }
 
+/** Apex and www both serve production; OAuth cookies must stay on the same host. */
+export function isProductionMetaHost(host: string): boolean {
+  const hostname = (host.split(":")[0] || host).toLowerCase();
+  return hostname === "mydermlounge.com" || hostname === "www.mydermlounge.com";
+}
+
+export const WWW_OAUTH_REDIRECT_URI = `https://www.mydermlounge.com${META_OAUTH_CALLBACK_PATH}`;
+
 export function metaOAuthRedirectUri(request?: Request): string {
   if (request) {
-    const host = new URL(request.url).host;
+    const url = new URL(request.url);
+    const host = url.host;
     if (isLocalMetaHost(host)) {
       return `http://${host}${META_OAUTH_CALLBACK_PATH}`;
+    }
+    if (isProductionMetaHost(host)) {
+      return `${url.origin}${META_OAUTH_CALLBACK_PATH}`;
     }
   }
   const env = process.env.META_OAUTH_REDIRECT_URI?.trim();
   if (env) return env.replace(/\/$/, "");
   return PRODUCTION_OAUTH_REDIRECT_URI;
+}
+
+export function metaOAuthRedirectUriOptions(): string[] {
+  const env = process.env.META_OAUTH_REDIRECT_URI?.trim()?.replace(/\/$/, "");
+  const uris = [
+    env || PRODUCTION_OAUTH_REDIRECT_URI,
+    PRODUCTION_OAUTH_REDIRECT_URI,
+    WWW_OAUTH_REDIRECT_URI,
+    LOCAL_OAUTH_REDIRECT_URI,
+  ];
+  return Array.from(new Set(uris.filter(Boolean)));
 }
 
 export function metaOAuthStartPath(): string {
@@ -158,8 +182,9 @@ export async function exchangeOAuthCode(
 }
 
 export function adminAppOrigin(request: Request): string {
-  if (isLocalMetaHost(new URL(request.url).host)) {
-    return new URL(request.url).origin;
+  const url = new URL(request.url);
+  if (isLocalMetaHost(url.host) || isProductionMetaHost(url.host)) {
+    return url.origin;
   }
   return companyLegal.siteUrl;
 }

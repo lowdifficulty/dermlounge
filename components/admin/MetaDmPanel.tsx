@@ -4,6 +4,7 @@ import { useCallback, useEffect, useState } from "react";
 
 type MetaDmStatus = {
   connected: boolean;
+  webhookUrl?: string;
   dmWebhookUrl?: string;
   verifyToken?: string;
   messagingSubscription?: { subscribed: boolean; fields: string[]; error?: string };
@@ -151,11 +152,11 @@ export default function MetaDmPanel() {
               DM webhook callback URL
             </div>
             <code className="block bg-gray-50 border border-gray-100 rounded-lg px-3 py-2 text-xs break-all">
-              {status.dmWebhookUrl}
+              {status?.webhookUrl || status?.dmWebhookUrl}
             </code>
             <p className="text-xs text-gray-500 mt-1">
-              Verify token: <code>{status.verifyToken}</code> — subscribe to{" "}
-              <strong>messages</strong> and <strong>messaging_postbacks</strong>.
+              Use this same URL in Meta Developer Console for both <strong>leadgen</strong> and{" "}
+              <strong>messages</strong>. Verify token: <code>{status?.verifyToken}</code>
             </p>
           </div>
         )}

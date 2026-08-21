@@ -8,7 +8,7 @@ import {
 import { graphGet } from "./graph";
 import { clearMetaInsightsCache } from "./insights";
 import { syncRecentMetaLeads } from "./leads";
-import { readLeadgenSubscription, subscribePageToLeadgen } from "./subscribe";
+import { readLeadgenSubscription, subscribePageToLeadgen, subscribePageToMessaging } from "./subscribe";
 import { probePageToken, USER_TOKEN_PASTE_MESSAGE, type MetaTokenStatus } from "./token";
 
 export type MetaAdsProbe = { ok: boolean; error?: string };
@@ -69,6 +69,12 @@ export async function finalizeMetaConnection(opts: {
       fields: [] as string[],
       error: err instanceof Error ? err.message : "Subscribe failed",
     };
+  }
+
+  try {
+    await subscribePageToMessaging();
+  } catch (err) {
+    console.error("Meta messages subscribe failed:", err);
   }
 
   let sync;

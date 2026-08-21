@@ -2,11 +2,13 @@ import { NextResponse } from "next/server";
 import { getSession, loginAdmin } from "@/lib/scheduling/auth";
 
 export async function POST(request: Request) {
-  const body = await request.json();
-  const { username, password } = body as {
-    username?: string;
-    password?: string;
-  };
+  let body: { username?: string; password?: string };
+  try {
+    body = (await request.json()) as { username?: string; password?: string };
+  } catch {
+    return NextResponse.json({ error: "Invalid JSON body" }, { status: 400 });
+  }
+  const { username, password } = body;
 
   if (!password) {
     return NextResponse.json({ error: "Password required" }, { status: 400 });

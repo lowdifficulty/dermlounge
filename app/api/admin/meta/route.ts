@@ -8,6 +8,7 @@ import {
   readMetaRuntimeConfig,
   resolveMetaAdAccountId,
   resolveMetaPageAccessToken,
+  resolveMetaAppId,
   resolveMetaPageId,
   resolveMetaVerifyToken,
   writeMetaRuntimeConfig,
@@ -23,7 +24,9 @@ import { backfillMetaConversations } from "@/lib/meta/backfill";
 import {
   LOCAL_OAUTH_REDIRECT_URI,
   PRODUCTION_OAUTH_REDIRECT_URI,
+  WWW_OAUTH_REDIRECT_URI,
   metaOAuthRedirectUri,
+  metaOAuthRedirectUriOptions,
   metaOAuthStartPath,
 } from "@/lib/meta/oauth";
 
@@ -57,8 +60,11 @@ async function metaStatusPayload(request?: Request) {
       startUrl: metaOAuthStartPath(),
       redirectUri: request ? metaOAuthRedirectUri(request) : PRODUCTION_OAUTH_REDIRECT_URI,
       productionRedirectUri: PRODUCTION_OAUTH_REDIRECT_URI,
+      wwwRedirectUri: WWW_OAUTH_REDIRECT_URI,
       localhostRedirectUri: LOCAL_OAUTH_REDIRECT_URI,
+      redirectUriOptions: metaOAuthRedirectUriOptions(),
     },
+    appId: (await resolveMetaAppId()) || null,
     config: {
       pageId,
       pageName: tokenStatus.pageName || config.pageName || "",

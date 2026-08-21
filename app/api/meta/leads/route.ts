@@ -6,6 +6,7 @@ import {
 } from "@/lib/meta/webhook";
 import { ingestLeadgenId } from "@/lib/meta/leads";
 import { writeMetaRuntimeConfig } from "@/lib/meta/config";
+import { processMetaMessagingWebhookPayload } from "@/lib/meta/messaging-webhook";
 
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
@@ -35,6 +36,15 @@ export async function POST(request: Request) {
     payload = raw ? JSON.parse(raw) : {};
   } catch {
     return NextResponse.json({ error: "Invalid JSON" }, { status: 400 });
+  }
+
+  let dmResult = { processed: 0, skipped: 0 };
+  try {
+    dmResult = await processMetaMessagingWebhookPayload(
+      payload as Parameters<typeof processMetaMessagingWebhookPayload>[0]
+    );
+  } catch (err) {
+    console.error("Meta messaging webhook failed:", err);
   }
 
   const notifications = parseLeadgenNotifications(payload);
@@ -69,10 +79,10 @@ export async function POST(request: Request) {
 
   if (errors.length > 0) {
     return NextResponse.json(
-      { ok: false, count: results.length, results, errors },
+      { ok: false, count: results.length, results, errors, dm: dmResult },
       { status: 500 }
     );
   }
 
-  return NextResponse.json({ ok: true, count: results.length, results });
+  return NextResponse.json({ ok: true, count: results.length, results, dm: dmResult });
 }

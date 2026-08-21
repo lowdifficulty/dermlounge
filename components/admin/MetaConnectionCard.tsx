@@ -22,7 +22,9 @@ export type MetaConnectionStatus = {
     startUrl: string;
     redirectUri: string;
     productionRedirectUri: string;
+    wwwRedirectUri?: string;
     localhostRedirectUri: string;
+    redirectUriOptions?: string[];
   };
   config: {
     pageId: string;
@@ -78,6 +80,8 @@ export default function MetaConnectionCard({
   disconnecting,
   onDisconnect,
   connectFailed,
+  connectError,
+  appId,
 }: {
   status: MetaConnectionStatus | null;
   compact?: boolean;
@@ -85,6 +89,8 @@ export default function MetaConnectionCard({
   disconnecting?: boolean;
   onDisconnect?: () => void;
   connectFailed?: boolean;
+  connectError?: string | null;
+  appId?: string | null;
 }) {
   const connected = status?.connected === true;
   const kind = status?.token?.kind || (connected ? "page" : "none");
@@ -94,9 +100,24 @@ export default function MetaConnectionCard({
   const adsOk = status?.adsInsights?.ok === true;
   const startUrl = status?.oauth?.startUrl || "/api/admin/meta/oauth";
   const redirectUri =
-    status?.oauth?.productionRedirectUri ||
     status?.oauth?.redirectUri ||
+    status?.oauth?.productionRedirectUri ||
     "https://mydermlounge.com/api/admin/meta/oauth/callback";
+  const redirectUriOptions =
+    status?.oauth?.redirectUriOptions ||
+    Array.from(
+      new Set(
+        [
+          redirectUri,
+          status?.oauth?.productionRedirectUri,
+          status?.oauth?.wwwRedirectUri,
+        ].filter(Boolean) as string[]
+      )
+    );
+
+  const metaAppId = appId || "1058248473418887";
+  const metaBasicUrl = `https://developers.facebook.com/apps/${metaAppId}/settings/basic/`;
+  const metaLoginUrl = `https://developers.facebook.com/apps/${metaAppId}/fb-login/settings/`;
 
   return (
     <div className="rounded-xl border border-gray-200 bg-white p-4 space-y-4">
@@ -164,11 +185,88 @@ export default function MetaConnectionCard({
         <Row ok={adsOk} label="Ads insights" value={adsOk ? "Yes" : "No"} />
       </div>
 
+      {!connected && (
+        <div className="rounded-lg border border-blue-200 bg-blue-50 px-3 py-3 text-sm text-blue-950 space-y-3">
+          <p className="font-semibold">
+            If Facebook shows &ldquo;Can&apos;t load URL — domain isn&apos;t included in the app&apos;s
+            domains&rdquo;
+          </p>
+          <p>
+            This is a Meta Developer Console setting — not the DermLounge website. Confirm you are
+            editing app <strong>{metaAppId}</strong> (check the number in the Meta URL bar).
+          </p>
+          <ol className="list-decimal pl-5 space-y-2">
+            <li>
+              Open{" "}
+              <a href={metaBasicUrl} target="_blank" rel="noreferrer" className="underline font-semibold">
+                Settings → Basic
+              </a>
+              . In <strong>App Domains</strong> type exactly{" "}
+              <code className="font-mono bg-white/70 px-1 rounded">mydermlounge.com</code> — no{" "}
+              <code>https://</code>, no trailing slash. Click <strong>Save Changes</strong>.
+            </li>
+            <li>
+              On the same Basic page, scroll to <strong>Add platform</strong> → choose{" "}
+              <strong>Website</strong> if it is missing. Set Site URL to{" "}
+              <code className="font-mono text-xs break-all">https://mydermlounge.com/</code> and save
+              again.
+            </li>
+            <li>
+              Open{" "}
+              <a href={metaLoginUrl} target="_blank" rel="noreferrer" className="underline font-semibold">
+                Facebook Login → Settings
+              </a>
+              . If that page 404s, add the <strong>Facebook Login</strong> product first (left sidebar →
+              Add product). Under <strong>Valid OAuth Redirect URIs</strong>, add both:
+              <ul className="list-disc pl-5 mt-1 font-mono text-xs break-all space-y-1">
+                {redirectUriOptions.map((uri) => (
+                  <li key={uri}>{uri}</li>
+                ))}
+              </ul>
+              Turn on <strong>Client OAuth Login</strong> and <strong>Web OAuth Login</strong>, then save.
+            </li>
+            <li>
+              Use the <strong>Redirect URI Validator</strong> on that Facebook Login settings page.
+              Paste{" "}
+              <code className="font-mono text-xs break-all">{redirectUriOptions[0] || redirectUri}</code>{" "}
+              — it must show valid before Connect Meta will work.
+            </li>
+          </ol>
+          <p className="text-xs">
+            Admin URL:{" "}
+            <a href="https://mydermlounge.com/admin/" className="underline">
+              https://mydermlounge.com/admin/
+            </a>{" "}
+            (www redirects to this automatically after deploy).
+          </p>
+        </div>
+      )}
+
       {connectFailed && (
-        <div className="rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-950">
-          Add this exact URI in Facebook Login for Business → Settings → Valid OAuth
-          Redirect URIs, then click Connect Meta again:
-          <div className="mt-1 font-mono text-xs break-all">{redirectUri}</div>
+        <div className="rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-950 space-y-2">
+          <p>{connectError || "Connect Meta did not finish. See the steps below and try again."}</p>
+          {(connectError || "").toLowerCase().includes("redirect") ||
+          (connectError || "").toLowerCase().includes("domain") ? (
+            <>
+              <p>
+                Add <strong>every</strong> URI below in Meta → <strong>Facebook Login</strong>{" "}
+                (or Facebook Login for Business) → Settings → Valid OAuth Redirect URIs:
+              </p>
+              <ul className="list-disc pl-5 space-y-1 font-mono text-xs break-all">
+                {redirectUriOptions.map((uri) => (
+                  <li key={uri}>{uri}</li>
+                ))}
+              </ul>
+              <p className="text-xs">
+                Also set Settings → Basic → App Domains to <code>mydermlounge.com</code>, and use
+                the same host you admin from (prefer{" "}
+                <a href="https://mydermlounge.com/admin/" className="underline">
+                  https://mydermlounge.com/admin/
+                </a>
+                ).
+              </p>
+            </>
+          ) : null}
         </div>
       )}
     </div>

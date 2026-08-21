@@ -25,15 +25,16 @@
     }
   ],
   "redirects": [
-
     {
-
-      "source": "/infected-and-inflammatory-wound-care/",
-
-      "destination": "/advanced-wound-care-services/infected-and-inflammatory-wound-care/",
-
+      "source": "/:path*",
+      "has": [{ "type": "host", "value": "www.mydermlounge.com" }],
+      "destination": "https://mydermlounge.com/:path*",
       "permanent": true
-
+    },
+    {
+      "source": "/infected-and-inflammatory-wound-care/",
+      "destination": "/advanced-wound-care-services/infected-and-inflammatory-wound-care/",
+      "permanent": true
     },
 
     {

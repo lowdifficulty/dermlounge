@@ -4,11 +4,10 @@ import { requireAdmin } from "@/lib/scheduling/auth";
 import { resolveMetaPageId } from "@/lib/meta/config";
 import { finalizeMetaConnection } from "@/lib/meta/connect";
 import {
-  LOCAL_OAUTH_REDIRECT_URI,
   META_OAUTH_STATE_COOKIE,
-  PRODUCTION_OAUTH_REDIRECT_URI,
   adminAppOrigin,
   exchangeOAuthCode,
+  metaOAuthRedirectUriOptions,
   readOAuthStateCookie,
 } from "@/lib/meta/oauth";
 import { resolvePageTokenFromUserToken } from "@/lib/meta/token";
@@ -28,14 +27,22 @@ function redirectToAdmin(request: Request, query: Record<string, string>) {
 }
 
 function connectFailedMessage(raw?: string | null): string {
-  const text = (raw || "").toLowerCase();
-  if (text.includes("redirect_uri") || text.includes("redirect uri")) {
-    return `Add this exact URI in Facebook Login → Settings → Valid OAuth Redirect URIs: ${PRODUCTION_OAUTH_REDIRECT_URI}`;
+  const text = (raw || "").trim();
+  if (!text) {
+    return "Connect Meta did not finish. Try again from https://mydermlounge.com/admin/ and allow all Page permissions.";
   }
-  if (text.includes("access_denied") || text.includes("user denied") || text.includes("cancelled")) {
+  const lower = text.toLowerCase();
+  if (lower.includes("redirect_uri") || lower.includes("redirect uri")) {
+    const uris = metaOAuthRedirectUriOptions().join("  AND  ");
+    return `Facebook rejected the OAuth redirect URI. Add both production URIs in Meta → Facebook Login → Settings → Valid OAuth Redirect URIs: ${uris}`;
+  }
+  if (lower.includes("access_denied") || lower.includes("user denied") || lower.includes("cancelled")) {
     return "Facebook login was cancelled. Click Connect Meta and allow Page and ads permissions.";
   }
-  return "Could not connect Meta. Add the redirect URI in Facebook Login settings, then click Connect Meta again.";
+  if (lower.includes("domain") && lower.includes("app")) {
+    return "Facebook blocked the callback domain. In Meta → Settings → Basic set App Domains to mydermlounge.com and add the Website platform with Site URL https://mydermlounge.com/";
+  }
+  return text;
 }
 
 export async function GET(request: Request) {
@@ -62,7 +69,8 @@ export async function GET(request: Request) {
   if (!code || !state || !cookie || cookie.nonce !== state) {
     return redirectToAdmin(request, {
       meta: "error",
-      meta_error: "Connect Meta expired. Click Connect Meta again.",
+      meta_error:
+        "Connect Meta expired (often www vs non-www). Open https://mydermlounge.com/admin/, log in, and click Connect Meta again.",
     });
   }
 
@@ -102,10 +110,6 @@ export async function GET(request: Request) {
     return redirectToAdmin(request, { meta: "connected" });
   } catch (err) {
     const message = err instanceof Error ? err.message : "Connect Meta failed";
-    const hint =
-      /redirect/i.test(message)
-        ? `Add this exact URI in Facebook Login → Settings → Valid OAuth Redirect URIs: ${PRODUCTION_OAUTH_REDIRECT_URI} (local: ${LOCAL_OAUTH_REDIRECT_URI})`
-        : message;
-    return redirectToAdmin(request, { meta: "error", meta_error: hint });
+    return redirectToAdmin(request, { meta: "error", meta_error: connectFailedMessage(message) });
   }
 }

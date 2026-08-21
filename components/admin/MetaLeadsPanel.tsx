@@ -9,6 +9,7 @@ type MetaStatus = MetaConnectionStatus & {
   webhookUrl: string;
   verifyToken: string;
   autoSmsEnabled: boolean;
+  appId?: string | null;
   config: MetaConnectionStatus["config"] & {
     adAccountId?: string;
     pageAccessTokenMasked: string;
@@ -34,6 +35,7 @@ export default function MetaLeadsPanel() {
   const [message, setMessage] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [connectFailed, setConnectFailed] = useState(false);
+  const [connectError, setConnectError] = useState<string | null>(null);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -61,11 +63,13 @@ export default function MetaLeadsPanel() {
     if (params.get("meta") === "connected") {
       setMessage("Meta is connected. Instant Form leads will enter CRM automatically.");
       setConnectFailed(false);
+      setConnectError(null);
     }
     const err = params.get("meta_error");
     if (err) {
       setError(err);
       setConnectFailed(true);
+      setConnectError(err);
       setShowAdvanced(true);
     }
   }, []);
@@ -185,6 +189,8 @@ export default function MetaLeadsPanel() {
         disconnecting={disconnecting}
         onDisconnect={() => void disconnect()}
         connectFailed={connectFailed}
+        connectError={connectError}
+        appId={status?.appId}
       />
 
       <div className="flex flex-wrap gap-2">
