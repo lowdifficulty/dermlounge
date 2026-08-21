@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { formatPhoneDisplay } from "@/lib/leads/normalize";
+import { isMetaOnlyPhone, metaContactLabel } from "@/lib/crm/meta-contact";
 import type { CrmConversationView, CrmContactStatus } from "@/lib/crm/types";
 import { crmContactStatusLabel } from "@/lib/crm/pipeline";
 import { useMediaQuery } from "@/lib/hooks/use-media-query";
@@ -134,6 +135,11 @@ const VIEW_TABS: { id: CrmConversationView; label: string; dotClass?: string }[]
 function serviceLabelForContact(c: CrmContact): string {
   const id = c.primaryMedicalService ?? c.medicalService;
   return medicalServiceTabLabel(getMedicalService(id));
+}
+
+function contactPhoneLabel(c: Pick<CrmContact, "phone" | "metaPlatform" | "metaPsid">): string {
+  if (isMetaOnlyPhone(c.phone)) return metaContactLabel(c.metaPlatform, Boolean(c.metaPsid));
+  return formatPhoneDisplay(c.phone);
 }
 
 function paneClass(show: boolean) {
@@ -312,6 +318,17 @@ export default function CrmPanel() {
       threadRef.current.scrollTop = threadRef.current.scrollHeight;
     }
   }, [detail?.interactions?.length, selectedId]);
+
+  useEffect(() => {
+    const contact = contacts.find((c) => c.id === selectedId) || detail;
+    if (!contact?.metaPsid) {
+      setComposeChannel("sms");
+      return;
+    }
+    if (isMetaOnlyPhone(contact.phone)) {
+      setComposeChannel("meta");
+    }
+  }, [selectedId, contacts, detail]);
 
   const selected = useMemo(
     () => contacts.find((c) => c.id === selectedId) || detail,
@@ -559,7 +576,7 @@ export default function CrmPanel() {
                       </div>
                     </div>
                     <div className="text-xs text-gray-500 truncate">
-                      {formatPhoneDisplay(c.phone)}
+                      {contactPhoneLabel(c)}
                       {c.service ? ` · ${c.service}` : ""}
                       {serviceId ? ` · ${serviceLabelForContact(c)}` : ""}
                     </div>
@@ -604,7 +621,7 @@ export default function CrmPanel() {
                       {detail?.fullName || selected.fullName || formatPhoneDisplay(selected.phone)}
                     </div>
                     <div className="text-xs text-gray-500 truncate">
-                      {formatPhoneDisplay(selected.phone)}
+                      {contactPhoneLabel(selected)}
                       {selected.email ? ` · ${selected.email}` : ""}
                     </div>
                   </div>
@@ -620,7 +637,8 @@ export default function CrmPanel() {
                   <button
                     type="button"
                     onClick={openCallDialer}
-                    className="px-3 py-1.5 rounded-lg text-xs font-semibold bg-accent text-white"
+                    disabled={isMetaOnlyPhone(selected.phone)}
+                    className="px-3 py-1.5 rounded-lg text-xs font-semibold bg-accent text-white disabled:opacity-40 disabled:cursor-not-allowed"
                   >
                     Call
                   </button>
@@ -661,7 +679,11 @@ export default function CrmPanel() {
                               ? ix.direction === "inbound"
                                 ? "Inbound call"
                                 : "Outbound call"
-                              : ix.actor === "bot"
+                              : ix.channel === "meta"
+                                ? ix.metadata?.metaPlatform === "instagram"
+                                  ? "Instagram DM"
+                                  : "Facebook DM"
+                                : ix.actor === "bot"
                                 ? suppressed
                                   ? "Bot draft (not sent)"
                                   : "Bot"
@@ -713,13 +735,15 @@ export default function CrmPanel() {
                 })}
                 {detail && smsThread.length === 0 && (
                   <div className="text-center text-sm text-gray-400 py-10">
-                    No messages yet — send the first SMS below.
+                    {selected?.metaPsid && isMetaOnlyPhone(selected.phone)
+                      ? "No messages yet — send the first Meta DM below."
+                      : "No messages yet — send the first SMS below."}
                   </div>
                 )}
               </div>
 
               <div className="bg-white border-t border-gray-200 p-3 space-y-2 shrink-0">
-                {selected?.metaPsid && (
+                {selected?.metaPsid && !isMetaOnlyPhone(selected.phone) && (
                   <div className="flex gap-1">
                     {(["sms", "meta"] as const).map((ch) => (
                       <button
@@ -742,7 +766,9 @@ export default function CrmPanel() {
                   onChange={(e) => setMessage(e.target.value)}
                   rows={2}
                   placeholder={
-                    composeChannel === "meta" ? "Write a Meta DM…" : "Write an SMS…"
+                    composeChannel === "meta" || (selected?.metaPsid && isMetaOnlyPhone(selected.phone))
+                      ? "Write a Meta DM…"
+                      : "Write an SMS…"
                   }
                   className="w-full border border-gray-200 rounded-xl px-3 py-2 text-sm resize-none"
                 />
@@ -751,7 +777,12 @@ export default function CrmPanel() {
                     <button
                       type="button"
                       onClick={() =>
-                        void (composeChannel === "meta" ? sendMetaDm() : sendSms())
+                        void (
+                          composeChannel === "meta" ||
+                          (selected?.metaPsid && isMetaOnlyPhone(selected.phone))
+                            ? sendMetaDm()
+                            : sendSms()
+                        )
                       }
                       disabled={busy === "sms" || !message.trim()}
                       className="px-4 py-2 rounded-lg text-sm font-semibold bg-brand text-white disabled:opacity-50"
@@ -850,7 +881,7 @@ function ContactDetailsContent({
         <div className="font-bold text-brand mt-1">
           {detail?.fullName || selected.fullName || formatPhoneDisplay(selected.phone)}
         </div>
-        <div className="text-sm text-gray-600 mt-1">{formatPhoneDisplay(selected.phone)}</div>
+        <div className="text-sm text-gray-600 mt-1">{contactPhoneLabel(detail ?? selected)}</div>
         {(detail?.email || selected.email) && (
           <div className="text-sm text-gray-600">{detail?.email || selected.email}</div>
         )}
@@ -867,17 +898,6 @@ function ContactDetailsContent({
               .join(", ")}
           </div>
         )}
-      </div>
-
-      <div>
-        {(detail?.pets || selected.pets).length === 0 && (
-          <div className="text-sm text-gray-400">No pets on file</div>
-        )}
-        {(detail?.pets || selected.pets).map((p, i) => (
-          <div key={`${p.petName}-${i}`} className="text-sm text-gray-700">
-            {p.petName || "Pet"} {p.petSize ? `· ${p.petSize}` : ""}
-          </div>
-        ))}
       </div>
 
       <div>

@@ -301,7 +301,7 @@ export async function resolvePermanentPageToken(
     throw new Error("Paste a System User token, or use Connect Meta");
   }
 
-  const fromUser = await resolvePageTokenFromUserToken(token, pageId, { requireLeadgen: true });
+  const fromUser = await resolvePageTokenFromUserToken(token, pageId, { requireLeadgen: false });
   if (fromUser.ok) {
     return {
       pageToken: fromUser.pageToken,
@@ -325,7 +325,7 @@ export async function resolvePermanentPageToken(
     if (isMissingPagePermsError(err) || (err instanceof MetaGraphError && err.code === 190)) {
       throw new Error(USER_TOKEN_PASTE_MESSAGE);
     }
-    throw err instanceof Error ? err : new Error(USER_TOKEN_PASTE_MESSAGE);
+    // Lead forms may be unavailable without leads_retrieval — Page token still works for DMs.
   }
 
   return {

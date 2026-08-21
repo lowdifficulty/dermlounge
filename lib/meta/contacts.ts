@@ -8,7 +8,11 @@ import {
   readCrmData,
   upsertContact,
 } from "@/lib/crm/store";
-import { crmPhoneDigits, crmPhoneE164, displayNameFromContact } from "@/lib/crm/phone";
+import {
+  crmPhoneE164,
+  displayNameFromContact,
+} from "@/lib/crm/phone";
+import { isMetaOnlyPhone } from "@/lib/crm/meta-contact";
 import type { CrmContact, MetaPlatform } from "@/lib/crm/types";
 import { fetchMetaUserProfile, type MetaUserProfile } from "./client";
 
@@ -157,10 +161,7 @@ export async function resolveOrCreateMetaContact(options: {
   return upsertContact(contact);
 }
 
-export function isMetaOnlyPhone(phone: string): boolean {
-  const digits = crmPhoneDigits(phone);
-  return digits.startsWith("8") && digits.length === 10;
-}
+export { isMetaOnlyPhone };
 
 export function pageScopedParticipantId(
   participants: { id?: string; name?: string; email?: string }[] | undefined,
