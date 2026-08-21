@@ -15,6 +15,7 @@ export const META_OAUTH_STATE_COOKIE = "dl_meta_oauth_state";
 export const META_OAUTH_SCOPES = [
   "pages_show_list",
   "pages_manage_metadata",
+  "pages_manage_ads",
   "pages_read_engagement",
   "pages_messaging",
   "leads_retrieval",
