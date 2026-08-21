@@ -85,11 +85,10 @@ export async function GET(request: Request) {
 
     const { userToken } = await exchangeOAuthCode(code, cookie.redirectUri);
     const resolved = await resolvePageTokenFromUserToken(userToken, pageId);
-    if (!resolved) {
+    if (!resolved.ok) {
       return redirectToAdmin(request, {
         meta: "error",
-        meta_error:
-          "Facebook did not grant Page access. Click Connect Meta again and allow the Page and ads permissions.",
+        meta_error: resolved.reason,
       });
     }
 
@@ -107,7 +106,11 @@ export async function GET(request: Request) {
       });
     }
 
-    return redirectToAdmin(request, { meta: "connected" });
+    const query: Record<string, string> = { meta: "connected" };
+    if (!resolved.leadgenOk && resolved.leadgenWarning) {
+      query.meta_warn = resolved.leadgenWarning;
+    }
+    return redirectToAdmin(request, query);
   } catch (err) {
     const message = err instanceof Error ? err.message : "Connect Meta failed";
     return redirectToAdmin(request, { meta: "error", meta_error: connectFailedMessage(message) });

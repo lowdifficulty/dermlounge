@@ -128,35 +128,100 @@ async function exchangeUserToken(token: string): Promise<string> {
   }
 }
 
+export type PageTokenResolveResult =
+  | {
+      ok: true;
+      pageToken: string;
+      userToken: string;
+      pageName: string;
+      exchanged: boolean;
+      leadgenOk: boolean;
+      leadgenWarning?: string;
+    }
+  | {
+      ok: false;
+      reason: string;
+      availablePages?: Array<{ id: string; name: string }>;
+    };
+
 export async function resolvePageTokenFromUserToken(
   userToken: string,
-  pageId: string
-): Promise<{
-  pageToken: string;
-  userToken: string;
-  pageName: string;
-  exchanged: boolean;
-} | null> {
+  pageId: string,
+  opts?: { requireLeadgen?: boolean }
+): Promise<PageTokenResolveResult> {
+  const requireLeadgen = opts?.requireLeadgen ?? false;
   const workingUser = await exchangeUserToken(userToken);
+  let accounts: PageAccount[] = [];
   try {
-    const accounts = await graphGet<{ data?: PageAccount[] }>("me/accounts", workingUser, {
+    const res = await graphGet<{ data?: PageAccount[] }>("me/accounts", workingUser, {
       fields: "id,name,access_token,tasks",
       limit: "100",
     });
-    const match = (accounts.data ?? []).find((page) => page.id === pageId);
-    if (!match?.access_token) return null;
-    const probe = await probePageToken(match.access_token, pageId);
-    if (!probe.valid) return null;
-    await assertLeadgenForms(pageId, match.access_token);
-    return {
-      pageToken: match.access_token,
-      userToken: workingUser,
-      pageName: match.name || probe.pageName || "",
-      exchanged: true,
-    };
-  } catch {
-    return null;
+    accounts = res.data ?? [];
+  } catch (err) {
+    const message = err instanceof Error ? err.message : "Could not list Facebook Pages";
+    if (isMissingPagePermsError(err)) {
+      return {
+        ok: false,
+        reason:
+          "Facebook did not grant pages_show_list. Click Connect Meta again and allow every Page permission, including access to DermLounge.",
+      };
+    }
+    return { ok: false, reason: message };
   }
+
+  const availablePages = accounts
+    .filter((page) => page.id)
+    .map((page) => ({ id: page.id as string, name: page.name || page.id as string }));
+
+  const match = accounts.find((page) => page.id === pageId);
+  if (!match?.access_token) {
+    const listed =
+      availablePages.length > 0
+        ? availablePages.map((p) => `${p.name} (${p.id})`).join(", ")
+        : "none";
+    return {
+      ok: false,
+      reason: `Facebook did not grant access to Page ${pageId}. Log in with the Facebook account that administers DermLounge, then on the permission screen enable every Page (including DermLounge) and all requested permissions. Pages Facebook returned: ${listed}.`,
+      availablePages,
+    };
+  }
+
+  const probe = await probePageToken(match.access_token, pageId);
+  if (!probe.valid) {
+    return {
+      ok: false,
+      reason:
+        probe.error ||
+        "Facebook returned a Page token but it failed validation. Try Connect Meta again.",
+      availablePages,
+    };
+  }
+
+  let leadgenOk = true;
+  let leadgenWarning: string | undefined;
+  try {
+    await assertLeadgenForms(pageId, match.access_token);
+  } catch (err) {
+    leadgenOk = false;
+    leadgenWarning =
+      err instanceof Error
+        ? err.message
+        : "Lead forms are not accessible yet (leads_retrieval may need App Review).";
+    if (requireLeadgen) {
+      return { ok: false, reason: leadgenWarning, availablePages };
+    }
+  }
+
+  return {
+    ok: true,
+    pageToken: match.access_token,
+    userToken: workingUser,
+    pageName: match.name || probe.pageName || "",
+    exchanged: true,
+    leadgenOk,
+    leadgenWarning,
+  };
 }
 
 /**
@@ -195,8 +260,15 @@ export async function resolvePermanentPageToken(
     throw new Error("Paste a System User token, or use Connect Meta");
   }
 
-  const fromUser = await resolvePageTokenFromUserToken(token, pageId);
-  if (fromUser) return fromUser;
+  const fromUser = await resolvePageTokenFromUserToken(token, pageId, { requireLeadgen: true });
+  if (fromUser.ok) {
+    return {
+      pageToken: fromUser.pageToken,
+      userToken: fromUser.userToken,
+      pageName: fromUser.pageName,
+      exchanged: fromUser.exchanged,
+    };
+  }
 
   const probe = await probePageToken(token, pageId);
   if (probe.missingPagePerms || probe.kind === "user") {
