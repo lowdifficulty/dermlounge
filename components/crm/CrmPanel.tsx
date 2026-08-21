@@ -148,6 +148,65 @@ function paneClass(show: boolean) {
     : "hidden lg:flex lg:flex-col lg:min-h-0 lg:min-w-0 lg:overflow-hidden";
 }
 
+function metaDmToggleLabel(platform?: string): string {
+  if (platform === "instagram") return "Instagram DM";
+  return "Meta DM";
+}
+
+function ComposeChannelToggle({
+  channel,
+  metaPlatform,
+  onChange,
+}: {
+  channel: "sms" | "meta";
+  metaPlatform?: string;
+  onChange: (channel: "sms" | "meta") => void;
+}) {
+  return (
+    <div
+      className="inline-flex rounded-lg border border-gray-200 overflow-hidden text-xs font-semibold shadow-sm"
+      role="group"
+      aria-label="Reply channel"
+    >
+      <button
+        type="button"
+        onClick={() => onChange("sms")}
+        className={`px-3.5 py-1.5 transition-colors ${
+          channel === "sms" ? "bg-accent text-white" : "bg-white text-gray-600 hover:bg-gray-50"
+        }`}
+        aria-pressed={channel === "sms"}
+      >
+        SMS
+      </button>
+      <button
+        type="button"
+        onClick={() => onChange("meta")}
+        className={`px-3.5 py-1.5 transition-colors border-l border-gray-200 ${
+          channel === "meta" ? "bg-accent text-white" : "bg-white text-gray-600 hover:bg-gray-50"
+        }`}
+        aria-pressed={channel === "meta"}
+      >
+        {metaDmToggleLabel(metaPlatform)}
+      </button>
+    </div>
+  );
+}
+
+function ComposeChannelBadge({
+  channel,
+  metaPlatform,
+}: {
+  channel: "sms" | "meta";
+  metaPlatform?: string;
+}) {
+  const label = channel === "sms" ? "SMS" : metaDmToggleLabel(metaPlatform);
+  return (
+    <span className="inline-flex items-center rounded-lg border border-gray-200 bg-gray-50 px-3.5 py-1.5 text-xs font-semibold text-gray-700 shadow-sm">
+      {label}
+    </span>
+  );
+}
+
 export default function CrmPanel() {
   const isLargeScreen = useMediaQuery("(min-width: 1024px)");
   const deepLinkContactId = useRef<string | null>(null);
@@ -334,6 +393,16 @@ export default function CrmPanel() {
     () => contacts.find((c) => c.id === selectedId) || detail,
     [contacts, selectedId, detail]
   );
+
+  const composeCapabilities = useMemo(() => {
+    if (!selected) return { sms: false, meta: false, dual: false, active: "sms" as const };
+    const meta = Boolean(selected.metaPsid);
+    const sms = !isMetaOnlyPhone(selected.phone);
+    const dual = sms && meta;
+    const active: "sms" | "meta" =
+      dual ? composeChannel : meta && !sms ? "meta" : "sms";
+    return { sms, meta, dual, active };
+  }, [selected, composeChannel]);
 
   const smsThread = useMemo(() => {
     return (detail?.interactions || []).filter(
@@ -743,22 +812,23 @@ export default function CrmPanel() {
               </div>
 
               <div className="bg-white border-t border-gray-200 p-3 space-y-2 shrink-0">
-                {selected?.metaPsid && !isMetaOnlyPhone(selected.phone) && (
-                  <div className="flex gap-1">
-                    {(["sms", "meta"] as const).map((ch) => (
-                      <button
-                        key={ch}
-                        type="button"
-                        onClick={() => setComposeChannel(ch)}
-                        className={`px-3 py-1 rounded-md text-xs font-semibold ${
-                          composeChannel === ch
-                            ? "bg-brand text-white"
-                            : "bg-gray-100 text-gray-600"
-                        }`}
-                      >
-                        {ch === "sms" ? "SMS" : "Meta DM"}
-                      </button>
-                    ))}
+                {(composeCapabilities.dual || composeCapabilities.meta) && (
+                  <div className="flex items-center gap-2">
+                    <span className="text-[11px] font-semibold uppercase tracking-wide text-gray-400 shrink-0">
+                      Reply via
+                    </span>
+                    {composeCapabilities.dual ? (
+                      <ComposeChannelToggle
+                        channel={composeChannel}
+                        metaPlatform={selected.metaPlatform}
+                        onChange={setComposeChannel}
+                      />
+                    ) : (
+                      <ComposeChannelBadge
+                        channel="meta"
+                        metaPlatform={selected.metaPlatform}
+                      />
+                    )}
                   </div>
                 )}
                 <textarea
@@ -766,8 +836,8 @@ export default function CrmPanel() {
                   onChange={(e) => setMessage(e.target.value)}
                   rows={2}
                   placeholder={
-                    composeChannel === "meta" || (selected?.metaPsid && isMetaOnlyPhone(selected.phone))
-                      ? "Write a Meta DM…"
+                    composeCapabilities.active === "meta"
+                      ? `Write a ${metaDmToggleLabel(selected.metaPlatform)}…`
                       : "Write an SMS…"
                   }
                   className="w-full border border-gray-200 rounded-xl px-3 py-2 text-sm resize-none"
@@ -777,17 +847,14 @@ export default function CrmPanel() {
                     <button
                       type="button"
                       onClick={() =>
-                        void (
-                          composeChannel === "meta" ||
-                          (selected?.metaPsid && isMetaOnlyPhone(selected.phone))
-                            ? sendMetaDm()
-                            : sendSms()
-                        )
+                        void (composeCapabilities.active === "meta" ? sendMetaDm() : sendSms())
                       }
                       disabled={busy === "sms" || !message.trim()}
-                      className="px-4 py-2 rounded-lg text-sm font-semibold bg-brand text-white disabled:opacity-50"
+                      className="px-4 py-2 rounded-lg text-sm font-semibold bg-accent text-white disabled:opacity-50"
                     >
-                      Send
+                      {composeCapabilities.active === "meta"
+                        ? `Send ${metaDmToggleLabel(selected.metaPlatform)}`
+                        : "Send SMS"}
                     </button>
                   </div>
                   <input
