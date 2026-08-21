@@ -13,6 +13,9 @@ const MIRROR_DIR = path.join(ROOT, "mirror", "html");
 
 const SITE_HOSTS = ["www.mydermlounge.com", "mydermlounge.com"];
 
+const FACEBOOK_DOMAIN_VERIFICATION =
+  '<meta name="facebook-domain-verification" content="yzhjfgtt33h4mzrh59lueu9c3wf9p4" />\n';
+
 /** WordPress nav uses short wound-care paths that 301 to nested routes on live. */
 const WOUND_CARE_LINK_REWRITES = [
   ["/infected-and-inflammatory-wound-care/", "/advanced-wound-care-services/infected-and-inflammatory-wound-care/"],
@@ -212,6 +215,12 @@ function removeShortpixelDnsPrefetch(html) {
 }
 
 /** @param {string} html */
+function injectFacebookDomainVerification(html) {
+  if (html.includes('name="facebook-domain-verification"')) return html;
+  return html.replace(/<head[^>]*>/i, (m) => m + "\n" + FACEBOOK_DOMAIN_VERIFICATION);
+}
+
+/** @param {string} html */
 function addFontPreconnect(html) {
   if (html.includes('rel="preconnect" href="https://fonts.gstatic.com"')) return html;
   const snippet =
@@ -363,6 +372,7 @@ function processHtml(html, options = {}) {
   out = rewriteWpContent(out);
   out = removeBreezePrefetch(out);
   out = removeShortpixelDnsPrefetch(out);
+  out = injectFacebookDomainVerification(out);
   out = removeHeroVideoPreload(out);
   out = addFontPreconnect(out);
   out = preloadGoogleFonts(out);

@@ -19,6 +19,9 @@ export const metadata: Metadata = {
   metadataBase: new URL("https://mydermlounge.com"),
   title: "My Derm Lounge",
   description: "Advanced dermatology and medical aesthetics in Anaheim, CA.",
+  other: {
+    "facebook-domain-verification": "yzhjfgtt33h4mzrh59lueu9c3wf9p4",
+  },
 };
 
 export default function RootLayout({
