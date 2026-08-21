@@ -3,6 +3,8 @@ import { readLeadsData } from "@/lib/leads/store";
 import { findContactByPhone, readCrmData } from "./store";
 import type { CrmContact } from "./types";
 
+import { contactHasPhoneNumberName, isPhoneNumberName, leadHasPhoneNumberName } from "./name-validation";
+
 export function normalizeContactName(value?: string): string {
   return (value || "").trim().toLowerCase().replace(/\s+/g, " ");
 }
@@ -14,11 +16,14 @@ export function contactNameKey(contact: Pick<CrmContact, "fullName" | "firstName
 }
 
 export async function findContactByName(name?: string): Promise<CrmContact | null> {
+  if (isPhoneNumberName(name)) return null;
   const needle = normalizeContactName(name);
   if (!needle) return null;
 
   const data = await readCrmData();
-  const matches = data.contacts.filter((c) => contactNameKey(c) === needle);
+  const matches = data.contacts.filter(
+    (c) => contactNameKey(c) === needle && !contactHasPhoneNumberName(c)
+  );
   if (matches.length === 1) return matches[0];
   if (matches.length > 1) {
     return matches.sort((a, b) =>
@@ -28,6 +33,7 @@ export async function findContactByName(name?: string): Promise<CrmContact | nul
 
   const { leads } = await readLeadsData();
   const leadMatches = leads.filter((l) => {
+    if (leadHasPhoneNumberName(l)) return false;
     const full = normalizeContactName(l.fullName);
     const joined = normalizeContactName([l.firstName, l.lastName].filter(Boolean).join(" "));
     return full === needle || joined === needle;

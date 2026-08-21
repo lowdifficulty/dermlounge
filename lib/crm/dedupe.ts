@@ -4,7 +4,12 @@ import { deleteLeadById, readLeadsData, writeLeadsData } from "@/lib/leads/store
 import type { Lead } from "@/lib/leads/types";
 import { contactNameKey, normalizeContactName } from "./contact-match";
 import { isMetaOnlyPhone } from "./meta-contact";
-import { readCrmData, writeCrmData } from "./store";
+import {
+  contactHasPhoneNumberName,
+  isPhoneNumberName,
+  leadHasPhoneNumberName,
+} from "./name-validation";
+import { deleteContactById, readCrmData, writeCrmData } from "./store";
 import type { CrmContact } from "./types";
 
 function pickLatestIso(a?: string, b?: string): string | undefined {
@@ -14,13 +19,10 @@ function pickLatestIso(a?: string, b?: string): string | undefined {
 }
 
 /** True when the contact card would show a phone number instead of a person's name. */
-export function isPhoneOnlyContact(contact: Pick<CrmContact, "fullName" | "firstName" | "lastName" | "phone">): boolean {
-  if (isMetaOnlyPhone(contact.phone)) return true;
-  const name = contactNameKey(contact);
-  if (!name) return true;
-  const digits = contact.phone.replace(/\D/g, "");
-  if (name.replace(/\D/g, "") === digits) return true;
-  return name === normalizeContactName(formatPhoneDisplay(contact.phone));
+export function isPhoneOnlyContact(
+  contact: Pick<CrmContact, "fullName" | "firstName" | "lastName" | "phone">
+): boolean {
+  return contactHasPhoneNumberName(contact);
 }
 
 function canMergeContacts(keeper: CrmContact, drop: CrmContact): boolean {
@@ -261,7 +263,60 @@ async function dedupeWeakNameMatches(): Promise<ContactDedupeResult> {
 }
 
 /** Run all contact dedupe passes (safe merges only). */
+export async function purgePhoneNumberNamedRecords(): Promise<{
+  removedContacts: number;
+  removedLeads: number;
+  removedContactIds: string[];
+  removedLeadIds: string[];
+}> {
+  const removedContactIds: string[] = [];
+  const removedLeadIds: string[] = [];
+
+  let crm = await readCrmData();
+  for (const contact of [...crm.contacts]) {
+    if (!contactHasPhoneNumberName(contact)) continue;
+    const removed = await deleteContactById(contact.id);
+    if (removed) {
+      removedContactIds.push(contact.id);
+      if (removed.leadId) {
+        removedLeadIds.push(removed.leadId);
+        await deleteLeadById(removed.leadId);
+      }
+    }
+  }
+
+  const leadsData = await readLeadsData();
+  for (const lead of [...leadsData.leads]) {
+    if (!leadHasPhoneNumberName(lead)) continue;
+    const idx = leadsData.leads.findIndex((l) => l.id === lead.id);
+    if (idx < 0) continue;
+    leadsData.leads.splice(idx, 1);
+    removedLeadIds.push(lead.id);
+
+    crm = await readCrmData();
+    const linked = crm.contacts.find((c) => c.leadId === lead.id);
+    if (linked) {
+      await deleteContactById(linked.id);
+      removedContactIds.push(linked.id);
+    }
+  }
+
+  if (removedLeadIds.length > 0) {
+    await writeLeadsData(leadsData);
+  }
+
+  return {
+    removedContacts: removedContactIds.length,
+    removedLeads: removedLeadIds.length,
+    removedContactIds,
+    removedLeadIds,
+  };
+}
+
+/** Run all contact dedupe passes (safe merges only). */
 export async function dedupeAllContacts(): Promise<ContactDedupeResult> {
+  await purgePhoneNumberNamedRecords();
+
   const removedContactIds: string[] = [];
   let merged = 0;
 
@@ -305,6 +360,15 @@ export async function dedupeLeads(): Promise<{ removed: number; removedLeadIds: 
   const data = await readLeadsData();
   const removedLeadIds: string[] = [];
 
+  for (const lead of [...data.leads]) {
+    if (!leadHasPhoneNumberName(lead)) continue;
+    const idx = data.leads.findIndex((l) => l.id === lead.id);
+    if (idx >= 0) {
+      data.leads.splice(idx, 1);
+      removedLeadIds.push(lead.id);
+    }
+  }
+
   function dropDuplicates(groups: Map<string, Lead[]>): void {
     for (const group of groups.values()) {
       if (group.length < 2) continue;
@@ -340,7 +404,7 @@ export async function dedupeLeads(): Promise<{ removed: number; removedLeadIds: 
     }
 
     const name = leadNameKey(lead);
-    if (name) {
+    if (name && !isPhoneNumberName(name)) {
       const list = byName.get(name) ?? [];
       list.push(lead);
       byName.set(name, list);

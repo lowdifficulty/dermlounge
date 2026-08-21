@@ -131,6 +131,10 @@ export async function patchLeadForAppointment(
     });
   }
 
+  if (!lead) {
+    return { ok: false, error: "Could not create lead", status: 400 };
+  }
+
   return patchLeadDetails(lead.id, patch, actor);
 }
 
@@ -174,6 +178,10 @@ export async function addNoteForAppointment(
       city: fields.city,
       zipCode: fields.zipCode,
     });
+  }
+
+  if (!lead) {
+    return { ok: false, error: "Could not create lead", status: 400 };
   }
 
   const updated = await addLeadNote(lead.id, trimmed);
@@ -238,6 +246,10 @@ export async function ensureLeadForGroomerAppointment(
       city: fields.city,
       zipCode: fields.zipCode,
     });
+  }
+
+  if (!lead) {
+    return { ok: false, error: "Could not create lead", status: 400 };
   }
 
   return { ok: true, leadId: lead.id };

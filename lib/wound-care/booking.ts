@@ -206,6 +206,10 @@ export async function bookWoundCareConsultation(
       .join(" · "),
   });
 
+  if (!lead) {
+    throw new Error("Unable to create lead record for consultation");
+  }
+
   if (contact && !contact.leadId) {
     await upsertContact({ ...contact, leadId: lead.id });
   }

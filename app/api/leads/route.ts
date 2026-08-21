@@ -37,6 +37,10 @@ export async function POST(request: Request) {
       source: body.source ?? "booking",
     });
 
+    if (!lead) {
+      return NextResponse.json({ error: "Invalid lead name" }, { status: 400 });
+    }
+
     return NextResponse.json({ success: true, leadId: lead.id });
   } catch (err) {
     console.error("Lead upsert failed:", err);

@@ -6,6 +6,11 @@ import { crmPhoneDigits, crmPhoneE164, displayNameFromContact } from "@/lib/crm/
 import { findContactByEmail, findContactByName } from "@/lib/crm/contact-match";
 import { isMetaOnlyPhone } from "@/lib/crm/meta-contact";
 import {
+  hasRealPersonName,
+  isPhoneNumberName,
+  sanitizePersonName,
+} from "@/lib/crm/name-validation";
+import {
   findContactByPhone,
   newContactId,
   newInteractionId,
@@ -111,9 +116,9 @@ export function parseGraphLead(lead: GraphLead): {
 
   return {
     leadgenId: lead.id,
-    firstName,
-    lastName,
-    fullName,
+    firstName: sanitizePersonName(firstName),
+    lastName: sanitizePersonName(lastName),
+    fullName: sanitizePersonName(fullName),
     email,
     phone,
     city,
@@ -206,6 +211,34 @@ export async function ingestGraphLead(lead: GraphLead): Promise<IngestResult> {
     };
   }
 
+  if (!hasRealPersonName(parsed)) {
+    const existingContact =
+      (digits.length >= 10 ? await findContactByPhone(digits) : null) ||
+      (parsed.email ? await findContactByEmail(parsed.email) : null);
+    if (existingContact) {
+      if (parsed.note && already) {
+        const hasNote = already.notes.some((n) => n.text.includes(parsed.leadgenId));
+        if (!hasNote) await addLeadNote(already.id, parsed.note);
+      }
+      return {
+        leadgenId: parsed.leadgenId,
+        created: false,
+        updated: Boolean(already),
+        skipped: true,
+        reason: "Rejected phone-number name — matched existing contact",
+        contactId: existingContact.id,
+        leadId: existingContact.leadId,
+      };
+    }
+    return {
+      leadgenId: parsed.leadgenId,
+      created: false,
+      updated: false,
+      skipped: true,
+      reason: "Rejected Meta lead with phone number as name and no real identity",
+    };
+  }
+
   const service = getMedicalService(DEFAULT_MEDICAL_SERVICE);
   const saved = await upsertLead({
     leadSessionId: sessionId,
@@ -224,6 +257,16 @@ export async function ingestGraphLead(lead: GraphLead): Promise<IngestResult> {
     source: "meta",
     message: already ? undefined : parsed.note,
   });
+
+  if (!saved) {
+    return {
+      leadgenId: parsed.leadgenId,
+      created: false,
+      updated: false,
+      skipped: true,
+      reason: "Rejected Meta lead with invalid or phone-number name",
+    };
+  }
 
   if (already && parsed.note) {
     const hasNote = already.notes.some((n) => n.text.includes(parsed.leadgenId));
@@ -249,7 +292,9 @@ export async function ingestGraphLead(lead: GraphLead): Promise<IngestResult> {
   }
   if (!existingContact) {
     const nameNeedle = parsed.fullName || [parsed.firstName, parsed.lastName].filter(Boolean).join(" ");
-    existingContact = await findContactByName(nameNeedle);
+    if (!isPhoneNumberName(nameNeedle)) {
+      existingContact = await findContactByName(nameNeedle);
+    }
   }
 
   const upgradingMetaOnly =

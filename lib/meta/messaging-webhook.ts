@@ -78,25 +78,33 @@ export async function processMetaMessagingWebhookPayload(payload: {
         ? new Date(event.timestamp).toISOString()
         : undefined;
 
-      const { contact, duplicate } = await recordInboundMeta({
-        psid,
-        platform,
-        body: message.text.trim(),
-        metaMessageId: message.mid,
-        createdAt,
-        skipIfExists: true,
-      });
-
-      if (duplicate) {
-        skipped++;
-        continue;
-      }
-
-      processed++;
       try {
-        await handleInboundMetaWithBot({ contact, inboundBody: message.text.trim() });
+        const { contact, duplicate } = await recordInboundMeta({
+          psid,
+          platform,
+          body: message.text.trim(),
+          metaMessageId: message.mid,
+          createdAt,
+          skipIfExists: true,
+        });
+
+        if (duplicate) {
+          skipped++;
+          continue;
+        }
+
+        processed++;
+        try {
+          await handleInboundMetaWithBot({ contact, inboundBody: message.text.trim() });
+        } catch (err) {
+          console.error("Meta bot reply failed:", err);
+        }
       } catch (err) {
-        console.error("Meta bot reply failed:", err);
+        if (err instanceof Error && err.message === "meta_no_real_name") {
+          skipped++;
+          continue;
+        }
+        throw err;
       }
     }
   }

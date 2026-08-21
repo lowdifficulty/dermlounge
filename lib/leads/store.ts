@@ -7,6 +7,12 @@ import { assertWritablePersistence, isVercelServerless } from "@/lib/scheduling/
 import { normalizePhone } from "./normalize";
 import { DEFAULT_MEDICAL_SERVICE } from "@/lib/medical-services";
 import {
+  hasRealPersonName,
+  isPhoneNumberName,
+  leadHasPhoneNumberName,
+  sanitizePersonName,
+} from "@/lib/crm/name-validation";
+import {
   funnelStepOrder,
   type Lead,
   type LeadFunnelStep,
@@ -116,7 +122,7 @@ function findLeadIndex(data: LeadsData, input: LeadUpsertInput): number {
   }
 
   const name = leadNameFromInput(input);
-  if (name && input.source === "meta") {
+  if (name && !isPhoneNumberName(name)) {
     const byName = data.leads.findIndex((l) => {
       const existing =
         normalizeLeadName(l.fullName) ||
@@ -149,47 +155,68 @@ function splitFullName(fullName?: string): { firstName?: string; lastName?: stri
   return { firstName: parts[0], lastName: parts.slice(1).join(" ") };
 }
 
-export async function upsertLead(input: LeadUpsertInput): Promise<Lead> {
+function sanitizeLeadInput(input: LeadUpsertInput): LeadUpsertInput {
+  const fullName = sanitizePersonName(input.fullName);
+  const firstName = sanitizePersonName(input.firstName);
+  const lastName = sanitizePersonName(input.lastName);
+  return {
+    ...input,
+    fullName,
+    firstName,
+    lastName,
+  };
+}
+
+export async function upsertLead(input: LeadUpsertInput): Promise<Lead | null> {
+  const cleaned = sanitizeLeadInput(input);
+
+  if (leadHasPhoneNumberName(cleaned)) {
+    return null;
+  }
+  if (cleaned.source === "meta" && !hasRealPersonName(cleaned)) {
+    return null;
+  }
+
   const data = await readLeadsData();
   const now = new Date().toISOString();
-  const phone = input.phone ? normalizePhone(input.phone) : "";
-  const idx = findLeadIndex(data, input);
-  const nameParts = splitFullName(input.fullName);
+  const phone = cleaned.phone ? normalizePhone(cleaned.phone) : "";
+  const idx = findLeadIndex(data, cleaned);
+  const nameParts = splitFullName(cleaned.fullName);
 
   if (idx >= 0) {
     const existing = data.leads[idx];
-    const funnelStep = mergeFunnelStep(existing.funnelStep, input.funnelStep);
+    const funnelStep = mergeFunnelStep(existing.funnelStep, cleaned.funnelStep);
     const isNewBooking =
-      input.funnelStep === "scheduled" && Boolean(input.appointmentId);
+      cleaned.funnelStep === "scheduled" && Boolean(cleaned.appointmentId);
     const updated: Lead = {
       ...existing,
-      leadSessionId: input.leadSessionId ?? existing.leadSessionId,
+      leadSessionId: cleaned.leadSessionId ?? existing.leadSessionId,
       phone: phone || existing.phone,
       funnelStep,
       followUpMode: isNewBooking
         ? "fu"
-        : (input.followUpMode ?? existing.followUpMode ?? "fu"),
-      firstName: input.firstName ?? nameParts.firstName ?? existing.firstName,
-      lastName: input.lastName ?? nameParts.lastName ?? existing.lastName,
-      fullName: input.fullName ?? existing.fullName,
-      email: input.email?.trim() ?? existing.email,
-      petName: input.petName ?? existing.petName,
-      petSize: input.petSize ?? existing.petSize,
-      pets: input.pets ?? existing.pets,
-      service: input.service ?? existing.service,
-      medicalService: input.medicalService ?? existing.medicalService ?? DEFAULT_MEDICAL_SERVICE,
-      address: input.address ?? existing.address,
-      city: input.city ?? existing.city,
-      zipCode: input.zipCode ?? existing.zipCode,
-      discountActive: input.discountActive ?? existing.discountActive,
-      discountSkipped: input.discountSkipped ?? existing.discountSkipped,
-      smsOptIn: input.smsOptIn ?? existing.smsOptIn,
-      appointmentId: input.appointmentId ?? existing.appointmentId,
-      scheduledAt: input.scheduledAt ?? existing.scheduledAt,
-      appointmentStartAt: input.appointmentStartAt ?? existing.appointmentStartAt,
-      groomerId: input.groomerId ?? existing.groomerId,
-      groomerName: input.groomerName ?? existing.groomerName,
-      source: input.source ?? existing.source,
+        : (cleaned.followUpMode ?? existing.followUpMode ?? "fu"),
+      firstName: cleaned.firstName ?? nameParts.firstName ?? existing.firstName,
+      lastName: cleaned.lastName ?? nameParts.lastName ?? existing.lastName,
+      fullName: cleaned.fullName ?? existing.fullName,
+      email: cleaned.email?.trim() ?? existing.email,
+      petName: cleaned.petName ?? existing.petName,
+      petSize: cleaned.petSize ?? existing.petSize,
+      pets: cleaned.pets ?? existing.pets,
+      service: cleaned.service ?? existing.service,
+      medicalService: cleaned.medicalService ?? existing.medicalService ?? DEFAULT_MEDICAL_SERVICE,
+      address: cleaned.address ?? existing.address,
+      city: cleaned.city ?? existing.city,
+      zipCode: cleaned.zipCode ?? existing.zipCode,
+      discountActive: cleaned.discountActive ?? existing.discountActive,
+      discountSkipped: cleaned.discountSkipped ?? existing.discountSkipped,
+      smsOptIn: cleaned.smsOptIn ?? existing.smsOptIn,
+      appointmentId: cleaned.appointmentId ?? existing.appointmentId,
+      scheduledAt: cleaned.scheduledAt ?? existing.scheduledAt,
+      appointmentStartAt: cleaned.appointmentStartAt ?? existing.appointmentStartAt,
+      groomerId: cleaned.groomerId ?? existing.groomerId,
+      groomerName: cleaned.groomerName ?? existing.groomerName,
+      source: cleaned.source ?? existing.source,
       lastActiveAt: now,
       updatedAt: now,
     };
@@ -200,36 +227,36 @@ export async function upsertLead(input: LeadUpsertInput): Promise<Lead> {
 
   const lead: Lead = {
     id: randomUUID(),
-    leadSessionId: input.leadSessionId,
+    leadSessionId: cleaned.leadSessionId,
     phone,
     contactMadeAt: now,
-    funnelStep: input.funnelStep,
-    firstName: input.firstName ?? nameParts.firstName,
-    lastName: input.lastName ?? nameParts.lastName,
-    fullName: input.fullName,
-    email: input.email?.trim(),
-    petName: input.petName,
-    petSize: input.petSize,
-    pets: input.pets,
-    service: input.service,
-    medicalService: input.medicalService ?? DEFAULT_MEDICAL_SERVICE,
-    address: input.address,
-    city: input.city,
-    zipCode: input.zipCode,
-    discountActive: input.discountActive,
-    discountSkipped: input.discountSkipped,
-    smsOptIn: input.smsOptIn,
-    appointmentId: input.appointmentId,
-    scheduledAt: input.scheduledAt,
-    appointmentStartAt: input.appointmentStartAt,
-    groomerId: input.groomerId,
-    groomerName: input.groomerName,
+    funnelStep: cleaned.funnelStep,
+    firstName: cleaned.firstName ?? nameParts.firstName,
+    lastName: cleaned.lastName ?? nameParts.lastName,
+    fullName: cleaned.fullName,
+    email: cleaned.email?.trim(),
+    petName: cleaned.petName,
+    petSize: cleaned.petSize,
+    pets: cleaned.pets,
+    service: cleaned.service,
+    medicalService: cleaned.medicalService ?? DEFAULT_MEDICAL_SERVICE,
+    address: cleaned.address,
+    city: cleaned.city,
+    zipCode: cleaned.zipCode,
+    discountActive: cleaned.discountActive,
+    discountSkipped: cleaned.discountSkipped,
+    smsOptIn: cleaned.smsOptIn,
+    appointmentId: cleaned.appointmentId,
+    scheduledAt: cleaned.scheduledAt,
+    appointmentStartAt: cleaned.appointmentStartAt,
+    groomerId: cleaned.groomerId,
+    groomerName: cleaned.groomerName,
     followUpMode: "fu",
     listStatus: "active",
-    notes: input.message
-      ? [{ id: randomUUID(), text: input.message, createdAt: now }]
+    notes: cleaned.message
+      ? [{ id: randomUUID(), text: cleaned.message, createdAt: now }]
       : [],
-    source: input.source ?? "booking",
+    source: cleaned.source ?? "booking",
     lastActiveAt: now,
     createdAt: now,
     updatedAt: now,

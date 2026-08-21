@@ -184,7 +184,7 @@ export async function ensureContactForPhone(phone: string): Promise<CrmContact> 
     id: newContactId(),
     phone: digits,
     phoneE164: crmPhoneE164(phone) ?? `+1${digits}`,
-    fullName: displayNameFromContact({ phone: digits }),
+    fullName: undefined,
     pets: [],
     appointmentIds: [],
     medicalService: DEFAULT_MEDICAL_SERVICE,

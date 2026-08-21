@@ -43,6 +43,9 @@ export async function recordInboundMeta(options: {
     psid: options.psid,
     platform: options.platform,
   });
+  if (!contact) {
+    throw new Error("meta_no_real_name");
+  }
 
   const now = options.createdAt || new Date().toISOString();
   const interaction: CrmInteraction = {
@@ -98,6 +101,9 @@ export async function importMetaHistoryMessage(options: {
     psid: options.psid,
     platform: options.platform,
   });
+  if (!contact) {
+    throw new Error("meta_no_real_name");
+  }
 
   const now = options.createdAt || new Date().toISOString();
   const interaction: CrmInteraction = {
