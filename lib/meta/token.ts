@@ -7,6 +7,47 @@ import {
   resolveMetaPageId,
 } from "./config";
 
+/** Scopes required for Pull now / leadgen_forms (Meta Marketing API). */
+export const META_LEAD_PULL_SCOPES = [
+  "pages_manage_ads",
+  "leads_retrieval",
+  "pages_show_list",
+  "pages_read_engagement",
+] as const;
+
+export async function inspectGrantedTokenScopes(token?: string | null): Promise<{
+  scopes: string[];
+  missingLeadScopes: string[];
+}> {
+  const access = token?.trim();
+  if (!access) {
+    return {
+      scopes: [],
+      missingLeadScopes: [...META_LEAD_PULL_SCOPES],
+    };
+  }
+  const appId = await resolveMetaAppId();
+  const appSecret = await resolveMetaAppSecret();
+  if (!appId || !appSecret) {
+    return { scopes: [], missingLeadScopes: [...META_LEAD_PULL_SCOPES] };
+  }
+  try {
+    const debug = await graphGetPublic<{
+      data?: { scopes?: string[]; is_valid?: boolean };
+    }>("debug_token", {
+      input_token: access,
+      access_token: `${appId}|${appSecret}`,
+    });
+    const scopes = debug.data?.scopes ?? [];
+    const missingLeadScopes = META_LEAD_PULL_SCOPES.filter(
+      (scope) => !scopes.includes(scope)
+    );
+    return { scopes, missingLeadScopes: [...missingLeadScopes] };
+  } catch {
+    return { scopes: [], missingLeadScopes: [...META_LEAD_PULL_SCOPES] };
+  }
+}
+
 export type MetaTokenKind = "page" | "user" | "expired" | "none" | "unknown";
 
 export type MetaTokenStatus = {

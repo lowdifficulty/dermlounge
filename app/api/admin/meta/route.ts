@@ -17,7 +17,7 @@ import {
 import { disconnectMetaConnection, finalizeMetaConnection, probeAdsRead } from "@/lib/meta/connect";
 import { syncExistingMetaLeads } from "@/lib/meta/leads";
 import { readLeadgenSubscription, subscribePageToLeadgen, readMessagingSubscription, subscribePageToMessaging } from "@/lib/meta/subscribe";
-import { inspectMetaAccessToken, resolvePermanentPageToken } from "@/lib/meta/token";
+import { inspectMetaAccessToken, inspectGrantedTokenScopes, resolvePermanentPageToken } from "@/lib/meta/token";
 import { clearMetaInsightsCache } from "@/lib/meta/insights";
 import { testMetaConnection } from "@/lib/meta/client";
 import { backfillMetaConversations } from "@/lib/meta/backfill";
@@ -44,6 +44,9 @@ async function metaStatusPayload(request?: Request) {
     ? await readMessagingSubscription()
     : { subscribed: false, fields: [] as string[], error: tokenStatus.error };
   const adsInsights = connected ? await probeAdsRead() : { ok: false };
+  const scopeProbe = connected
+    ? await inspectGrantedTokenScopes(config.userAccessToken?.trim() || token)
+    : { scopes: [] as string[], missingLeadScopes: [] as string[] };
 
   return {
     connected,
@@ -53,6 +56,9 @@ async function metaStatusPayload(request?: Request) {
     verifyToken,
     autoSmsEnabled: false,
     token: tokenStatus,
+    tokenScopes: scopeProbe.scopes,
+    missingLeadScopes: scopeProbe.missingLeadScopes,
+    needsLeadScopeReconnect: scopeProbe.missingLeadScopes.length > 0,
     subscription,
     messagingSubscription,
     adsInsights,
@@ -218,6 +224,19 @@ export async function POST(request: Request) {
   }
 
   try {
+    const scopeProbe = await inspectGrantedTokenScopes(
+      (await readMetaRuntimeConfig()).userAccessToken?.trim() ||
+        (await resolveMetaPageAccessToken())
+    );
+    if (scopeProbe.missingLeadScopes.includes("pages_manage_ads")) {
+      return NextResponse.json(
+        {
+          error:
+            "Missing pages_manage_ads on your Meta token. Click Disconnect, then Connect Meta again and allow every Page + Ads permission. If Facebook does not show that permission, add pages_manage_ads in Meta App → App Review → Permissions and Features, then reconnect.",
+        },
+        { status: 400 }
+      );
+    }
     const result = await syncExistingMetaLeads();
     return NextResponse.json({ ok: true, ...result, autoSmsEnabled: false });
   } catch (err) {

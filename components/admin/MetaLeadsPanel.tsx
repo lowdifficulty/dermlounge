@@ -10,6 +10,9 @@ type MetaStatus = MetaConnectionStatus & {
   verifyToken: string;
   autoSmsEnabled: boolean;
   appId?: string | null;
+  tokenScopes?: string[];
+  missingLeadScopes?: string[];
+  needsLeadScopeReconnect?: boolean;
   config: MetaConnectionStatus["config"] & {
     adAccountId?: string;
     pageAccessTokenMasked: string;
@@ -181,6 +184,40 @@ export default function MetaLeadsPanel() {
       {error && (
         <div className="rounded-xl border border-red-200 bg-red-50 text-red-800 px-4 py-3 text-sm">
           {error}
+        </div>
+      )}
+
+      {status?.connected && status.needsLeadScopeReconnect && (
+        <div className="rounded-xl border border-amber-200 bg-amber-50 text-amber-950 px-4 py-3 text-sm space-y-2">
+          <p className="font-semibold">Reconnect Meta to enable Pull now</p>
+          <p>
+            Your token is missing:{" "}
+            <code className="font-mono text-xs">
+              {(status.missingLeadScopes || []).join(", ")}
+            </code>
+          </p>
+          <ol className="list-decimal pl-5 space-y-1">
+            <li>
+              In{" "}
+              <a
+                href={`https://developers.facebook.com/apps/${status.appId || "1058248473418887"}/app-review/permissions/`}
+                target="_blank"
+                rel="noreferrer"
+                className="underline font-semibold"
+              >
+                Meta App → Permissions and Features
+              </a>
+              , ensure <strong>pages_manage_ads</strong> and{" "}
+              <strong>leads_retrieval</strong> are added to the app.
+            </li>
+            <li>
+              Click <strong>Disconnect</strong>, then <strong>Connect Meta</strong> again.
+            </li>
+            <li>
+              On Facebook, allow <strong>all</strong> Page and Ads permissions (including manage
+              ads).
+            </li>
+          </ol>
         </div>
       )}
 
