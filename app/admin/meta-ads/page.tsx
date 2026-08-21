@@ -10,7 +10,7 @@ export const metadata = {
 export default async function AdminMetaAdsPage() {
   const session = await getSession();
   if (!session.user || session.user.role !== "admin") {
-    redirect("/admin/login");
+    redirect("/admin/login/");
   }
 
   return <AdminDashboard initialTab="metaAds" />;

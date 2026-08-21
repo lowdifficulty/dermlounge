@@ -1,7 +1,6 @@
 "use client";
 
 import { useState } from "react";
-import { useRouter } from "next/navigation";
 import Link from "next/link";
 import SchedulingShell from "./SchedulingShell";
 
@@ -17,7 +16,6 @@ export default function SchedulingLoginForm({
   loginPath: string;
   dashboardPath: string;
 }) {
-  const router = useRouter();
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
@@ -28,9 +26,10 @@ export default function SchedulingLoginForm({
     setError("");
     setLoading(true);
 
-    const res = await fetch("/api/auth/login", {
+    const res = await fetch("/api/auth/login/", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
+      credentials: "same-origin",
       body: JSON.stringify({
         role,
         username: role === "groomer" ? username : role === "admin" ? username : undefined,
@@ -46,8 +45,9 @@ export default function SchedulingLoginForm({
       return;
     }
 
-    router.push(dashboardPath);
-    router.refresh();
+    // Full navigation so the browser applies Set-Cookie before the dashboard loads.
+    const dest = dashboardPath.endsWith("/") ? dashboardPath : `${dashboardPath}/`;
+    window.location.assign(dest);
   }
 
   return (

@@ -15,7 +15,7 @@ export default async function AdminDashboardPage({
 }) {
   const session = await getSession();
   if (!session.user || session.user.role !== "admin") {
-    redirect("/admin/login");
+    redirect("/admin/login/");
   }
 
   const { tab } = await searchParams;
